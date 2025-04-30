@@ -1,0 +1,379 @@
+/**
+ * Estilos para el módulo de Equipos
+ * SIGESMANV1
+ */
+
+/* Estilos generales del módulo */
+.page-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.breadcrumb {
+  font-size: 0.75rem;
+}
+
+/* Estilos para la tabla de equipos */
+.data-table {
+  font-size: 0.85rem;
+}
+
+.data-table thead th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+  border-bottom-width: 1px;
+  white-space: nowrap;
+}
+
+.data-table tbody td {
+  vertical-align: middle;
+  padding: 0.5rem;
+}
+
+/* Estilos para las imágenes en la tabla */
+.equipo-imagen-tabla {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para los botones de acción en la tabla */
+.btn-accion {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  margin-right: 0.25rem;
+}
+
+.btn-accion:last-child {
+  margin-right: 0;
+}
+
+/* Estilos para los filtros */
+.card-header {
+  padding: 0.75rem 1rem;
+}
+
+.card-title {
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+.form-label {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+/* Estilos para los modales */
+.modal-header {
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.modal-footer {
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa;
+}
+
+/* Estilos para el formulario */
+.form-group {
+  margin-bottom: 0.75rem;
+}
+
+.form-control-sm,
+.form-select-sm {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  height: calc(1.5em + 0.5rem + 2px);
+}
+
+textarea.form-control-sm {
+  height: auto;
+}
+
+/* Estilos para la vista de detalles */
+.equipo-imagen-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.equipo-imagen-container img {
+  max-height: 200px;
+  width: auto;
+  max-width: 100%;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.detalle-item {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.detalle-label {
+  font-weight: 600;
+  color: #495057;
+  margin-right: 0.25rem;
+}
+
+.detalle-valor {
+  color: #212529;
+}
+
+/* Estilos para los componentes asociados */
+#componentes-table {
+  font-size: 0.8rem;
+}
+
+#componentes-table thead th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+  padding: 0.5rem;
+}
+
+#componentes-table tbody td {
+  padding: 0.4rem 0.5rem;
+}
+
+/* Estilos para los estados */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+/* Estilos para los botones de exportación */
+.export-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.export-buttons .btn {
+  font-size: 0.8rem;
+}
+
+/* Estilos responsivos */
+@media (max-width: 767.98px) {
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .equipo-imagen-container img {
+    max-height: 150px;
+  }
+
+  .data-table {
+    font-size: 0.8rem;
+  }
+
+  .btn-accion {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  /* Ajustes para la vista de detalles en móvil */
+  #detalle-nombre {
+    font-size: 1.1rem;
+    margin-top: 1rem;
+  }
+
+  .detalle-item {
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* Estilos para pantallas muy pequeñas */
+@media (max-width: 575.98px) {
+  .page-header .col-auto {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+
+  .page-header .btn {
+    width: 100%;
+  }
+
+  .export-buttons {
+    justify-content: center;
+  }
+
+  .export-buttons .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* Estilos para la imagen en el modal de detalles */
+#detalle-imagen {
+  display: block;
+  margin: 0 auto;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+/* Estilos para el botón de ver imagen */
+#btn-ver-imagen {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Estilos para el mensaje de sin componentes */
+#sin-componentes {
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+}
+
+#sin-componentes p {
+  font-size: 0.85rem;
+}
+
+/* Estilos para los tooltips */
+.tooltip-inner {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Estilos para los mensajes de validación */
+.invalid-feedback {
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+}
+
+/* Estilos para los campos requeridos */
+.form-label .text-danger {
+  font-weight: bold;
+}
+
+/* Estilos para el componente de carga de imágenes */
+.image-upload-container {
+  border: 1px dashed #ced4da;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  text-align: center;
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+}
+
+.image-upload-container:hover {
+  border-color: #6c757d;
+  background-color: #e9ecef;
+}
+
+.image-upload-preview {
+  max-height: 150px;
+  max-width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.image-upload-placeholder {
+  color: #6c757d;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.image-upload-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.image-upload-buttons .btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Estilos para DataTables */
+.dataTables_wrapper .dataTables_length select {
+  min-width: 60px;
+  font-size: 0.85rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  font-size: 0.85rem;
+  padding-top: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Estilos para el loader */
+.ajax-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.ajax-loader-content {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.ajax-loader-spinner {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* Estilos para los toast */
+.toast-container {
+  z-index: 9999;
+}
+
+.toast {
+  font-size: 0.85rem;
+}
+
+.toast-header {
+  padding: 0.5rem 0.75rem;
+}
+
+.toast-body {
+  padding: 0.75rem;
+}
