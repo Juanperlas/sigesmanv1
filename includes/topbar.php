@@ -11,7 +11,7 @@ $rol_mostrado = isset($usuario['roles']) && !empty($usuario['roles']) ? ucfirst(
         <button class="sidebar-toggle d-none d-lg-block" id="sidebarToggleLg">
             <i class="bi bi-list"></i>
         </button>
-        
+
         <div class="search-container d-none d-md-block">
             <form class="search-form">
                 <div class="input-group">
@@ -26,13 +26,13 @@ $rol_mostrado = isset($usuario['roles']) && !empty($usuario['roles']) ? ucfirst(
             </form>
         </div>
     </div>
-    
+
     <div class="topbar-right">
         <div class="topbar-actions">
             <button class="btn btn-icon d-md-none" id="searchToggle">
                 <i class="bi bi-search"></i>
             </button>
-            
+
             <div class="dropdown">
                 <button class="btn btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-bell"></i>
@@ -78,7 +78,7 @@ $rol_mostrado = isset($usuario['roles']) && !empty($usuario['roles']) ? ucfirst(
                     </div>
                 </div>
             </div>
-            
+
             <div class="dropdown ms-2">
                 <button class="btn btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <img src="<?php echo isset($usuario['fotografia']) && !empty($usuario['fotografia']) ? getAssetUrl($usuario['fotografia']) : getAssetUrl('assets/img/avatar-default.png'); ?>" alt="<?php echo isset($usuario) ? htmlspecialchars($usuario['nombre']) : 'Usuario'; ?>" class="avatar">
