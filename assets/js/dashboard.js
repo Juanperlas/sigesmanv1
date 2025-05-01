@@ -37,19 +37,31 @@ let equipmentCategoryChart = null;
  */
 function initCharts() {
   // Cargar datos iniciales para los gráficos
-  loadChartData("estado_equipos", "todos", renderEquipmentStatusChart);
-  loadChartData("tipos_mantenimiento", "1y", renderMaintenanceTypeChart);
+  loadChartData("estadisticas", null, null, function (data) {
+    // Actualizar estadísticas si es necesario
+    console.log("Estadísticas cargadas:", data);
+  });
+
   loadChartData(
     "historial_mantenimiento",
     "1y",
     "todos",
     renderMaintenanceHistoryChart
   );
-  loadChartData("tendencia_mantenimiento", "30d", renderMaintenanceTrendChart);
-  loadChartData("categorias_equipos", null, renderEquipmentCategoryChart);
+  loadChartData(
+    "tendencia_mantenimiento",
+    "30d",
+    "todos",
+    renderMaintenanceTrendChart
+  );
 
   // Cargar datos para la tabla de próximos mantenimientos
   loadTableData("proximos_mantenimientos", renderMaintenanceTable);
+
+  // Cargar eventos para el calendario
+  loadTableData("eventos_calendario", function (data) {
+    console.log("Eventos del calendario cargados:", data);
+  });
 }
 
 /**
@@ -107,10 +119,10 @@ function loadChartData(tipo, periodo = null, categoria = null, callback) {
         const chartElement = document.getElementById(chartId);
         if (chartElement) {
           chartElement.innerHTML = `
-              <div class="alert alert-danger">
-                Error al cargar datos: ${error.message}
-              </div>
-            `;
+            <div class="alert alert-danger">
+              Error al cargar datos: ${error.message}
+            </div>
+          `;
         }
       }
     });
