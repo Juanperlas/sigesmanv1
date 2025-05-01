@@ -10,22 +10,22 @@ if (!estaAutenticado()) {
 }
 
 // Verificar permiso
-if (!tienePermiso('equipos.ver')) {
+if (!tienePermiso('componentes.ver')) {
     header("Location: ../../../dashboard.php?error=no_autorizado");
     exit;
 }
 
-// Obtener categorías de equipos para el formulario
+// Obtener equipos para el formulario
 $conexion = new Conexion();
-$categorias = $conexion->select("SELECT id, nombre FROM categorias_equipos ORDER BY nombre");
+$equipos = $conexion->select("SELECT id, codigo, nombre FROM equipos ORDER BY nombre");
 
 // Título de la página
-$titulo = "Gestión de Equipos";
+$titulo = "Gestión de Componentes";
 
 // Definir CSS y JS adicionales para este módulo
 $css_adicional = [
     'assets/plugins/datatables/css/datatables.min.css',
-    'assets/css/equipos/equipos/equipos.css',
+    'assets/css/equipos/componentes/componentes.css',
     'componentes/image-upload/image-upload.css',
     'componentes/image-viewer/image-viewer.css',
     'componentes/toast/toast.css'
@@ -39,7 +39,7 @@ $js_adicional = [
     'componentes/image-upload/image-upload.js',
     'componentes/image-viewer/image-viewer.js',
     'componentes/toast/toast.js',
-    'assets/js/equipos/equipos/equipos.js'
+    'assets/js/equipos/componentes/componentes.js'
 ];
 
 // Incluir el header
@@ -59,14 +59,15 @@ include_once '../../../includes/topbar.php';
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb small">
                             <li class="breadcrumb-item"><a href="<?php echo $baseUrl; ?>dashboard.php">Dashboard</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Equipos</li>
+                            <li class="breadcrumb-item"><a href="<?php echo $baseUrl; ?>modulos/equipos/equipos/">Equipos</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Componentes</li>
                         </ol>
                     </nav>
                 </div>
                 <div class="col-auto">
-                    <?php if (tienePermiso('equipos.crear')): ?>
-                        <button type="button" id="btn-nuevo-equipo" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i> Nuevo Equipo
+                    <?php if (tienePermiso('componentes.crear')): ?>
+                        <button type="button" id="btn-nuevo-componente" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i> Nuevo Componente
                         </button>
                     <?php endif; ?>
                 </div>
@@ -84,6 +85,15 @@ include_once '../../../includes/topbar.php';
                 </div>
                 <div class="card-body py-2">
                     <div class="row g-2">
+                        <div class="col-md-3">
+                            <label for="filtro-equipo" class="form-label small">Equipo</label>
+                            <select id="filtro-equipo" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                <?php foreach ($equipos as $equipo): ?>
+                                    <option value="<?php echo $equipo['id']; ?>"><?php echo htmlspecialchars($equipo['codigo'] . ' - ' . $equipo['nombre']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                         <div class="col-md-3">
                             <label for="filtro-estado" class="form-label small">Estado</label>
                             <select id="filtro-estado" class="form-select form-select-sm">
@@ -107,27 +117,26 @@ include_once '../../../includes/topbar.php';
                 </div>
             </div>
 
-            <!-- Tabla de equipos -->
+            <!-- Tabla de componentes -->
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table id="equipos-table" class="table table-sm table-striped table-hover data-table">
+                        <table id="componentes-table" class="table table-sm table-striped table-hover data-table">
                             <thead>
                                 <tr>
                                     <th width="60">Imagen</th>
                                     <th width="100">Código</th>
                                     <th>Nombre</th>
-                                    <th width="100">Tipo</th>
-                                    <th>Marca/Modelo</th>
+                                    <th width="150">Equipo</th>
+                                    <th width="100">Marca</th>
                                     <th width="100">Estado</th>
-                                    <th width="100">Orómetro</th>
-                                    <th>Ubicación</th>
+                                    <th width="180">Progreso Mantenimiento</th>
                                     <th width="100">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="9" class="text-center">Cargando datos...</td>
+                                    <td colspan="8" class="text-center">Cargando datos...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -138,17 +147,17 @@ include_once '../../../includes/topbar.php';
     </div>
 </div>
 
-<!-- Modal para crear/editar equipo -->
-<div class="modal fade" id="modal-equipo" tabindex="-1" aria-labelledby="modal-equipo-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+<!-- Modal para crear/editar componente -->
+<div class="modal fade" id="modal-componente" tabindex="-1" aria-labelledby="modal-componente-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modal-equipo-titulo">Nuevo Equipo</h5>
+                <h5 class="modal-title" id="modal-componente-titulo">Nuevo Componente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <form id="form-equipo" enctype="multipart/form-data">
-                    <input type="hidden" id="equipo-id" name="id">
+                <form id="form-componente" enctype="multipart/form-data">
+                    <input type="hidden" id="componente-id" name="id">
 
                     <div class="row">
                         <!-- Columna izquierda -->
@@ -157,40 +166,34 @@ include_once '../../../includes/topbar.php';
                                 <!-- Información básica -->
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-codigo" class="form-label small">Código <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-codigo" name="codigo" required>
+                                        <label for="componente-codigo" class="form-label small">Código <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="componente-codigo" name="codigo" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-nombre" class="form-label small">Nombre <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-nombre" name="nombre" required>
+                                        <label for="componente-nombre" class="form-label small">Nombre <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="componente-nombre" name="nombre" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-categoria" class="form-label small">Categoría <span class="text-danger">*</span></label>
-                                        <select class="form-select form-select-sm" id="equipo-categoria" name="categoria_id" required>
+                                        <label for="componente-equipo" class="form-label small">Equipo <span class="text-danger">*</span></label>
+                                        <select class="form-select form-select-sm" id="componente-equipo" name="equipo_id" required>
                                             <option value="">Seleccione...</option>
-                                            <?php foreach ($categorias as $categoria): ?>
-                                                <option value="<?php echo $categoria['id']; ?>"><?php echo htmlspecialchars($categoria['nombre']); ?></option>
+                                            <?php foreach ($equipos as $equipo): ?>
+                                                <option value="<?php echo $equipo['id']; ?>"><?php echo htmlspecialchars($equipo['codigo'] . ' - ' . $equipo['nombre']); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-tipo" class="form-label small">Tipo de Equipo <span class="text-danger">*</span></label>
-                                        <select class="form-select form-select-sm" id="equipo-tipo" name="tipo_equipo" required>
+                                        <label for="componente-tipo" class="form-label small">Tipo de Medición <span class="text-danger">*</span></label>
+                                        <select class="form-select form-select-sm" id="componente-tipo" name="tipo" required>
                                             <option value="">Seleccione...</option>
-                                            <option value="general">General</option>
-                                            <option value="maquina">Máquina</option>
-                                            <option value="motor">Motor</option>
-                                            <option value="chancadora">Chancadora</option>
-                                            <option value="pulverizadora">Pulverizadora</option>
-                                            <option value="molino">Molino</option>
-                                            <option value="remolienda">Remolienda</option>
-                                            <option value="icon">Icon</option>
+                                            <option value="horas">Horas</option>
+                                            <option value="kilometros">Kilómetros</option>
                                         </select>
                                     </div>
                                 </div>
@@ -198,54 +201,28 @@ include_once '../../../includes/topbar.php';
                                 <!-- Detalles técnicos -->
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-marca" class="form-label small">Marca</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-marca" name="marca">
+                                        <label for="componente-marca" class="form-label small">Marca</label>
+                                        <input type="text" class="form-control form-control-sm" id="componente-marca" name="marca">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-modelo" class="form-label small">Modelo</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-modelo" name="modelo">
+                                        <label for="componente-modelo" class="form-label small">Modelo</label>
+                                        <input type="text" class="form-control form-control-sm" id="componente-modelo" name="modelo">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-serie" class="form-label small">Número de Serie</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-serie" name="numero_serie">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-2">
-                                        <label for="equipo-capacidad" class="form-label small">Capacidad</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-capacidad" name="capacidad">
+                                        <label for="componente-serie" class="form-label small">Número de Serie</label>
+                                        <input type="text" class="form-control form-control-sm" id="componente-serie" name="numero_serie">
                                     </div>
                                 </div>
 
-                                <!-- Información eléctrica -->
+                                <!-- Estado y orómetro -->
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-fase" class="form-label small">Fase</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-fase" name="fase">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-2">
-                                        <label for="equipo-linea" class="form-label small">Línea Eléctrica</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-linea" name="linea_electrica">
-                                    </div>
-                                </div>
-
-                                <!-- Ubicación y estado -->
-                                <div class="col-md-6">
-                                    <div class="form-group mb-2">
-                                        <label for="equipo-ubicacion" class="form-label small">Ubicación</label>
-                                        <input type="text" class="form-control form-control-sm" id="equipo-ubicacion" name="ubicacion">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-2">
-                                        <label for="equipo-estado" class="form-label small">Estado <span class="text-danger">*</span></label>
-                                        <select class="form-select form-select-sm" id="equipo-estado" name="estado" required>
+                                        <label for="componente-estado" class="form-label small">Estado <span class="text-danger">*</span></label>
+                                        <select class="form-select form-select-sm" id="componente-estado" name="estado" required>
                                             <option value="">Seleccione...</option>
                                             <option value="activo">Activo</option>
                                             <option value="mantenimiento">Mantenimiento</option>
@@ -255,38 +232,36 @@ include_once '../../../includes/topbar.php';
                                         </select>
                                     </div>
                                 </div>
-
-                                <!-- Información de orómetro -->
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-orometro" class="form-label small">Orómetro Actual (hrs)</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="equipo-orometro" name="orometro_actual" value="0">
+                                        <label for="componente-orometro" class="form-label small">Orómetro Actual <span id="unidad-orometro">(hrs)</span></label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="componente-orometro" name="orometro_actual" value="0">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-limite" class="form-label small">Límite (hrs)</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="equipo-limite" name="limite">
+                                        <label for="componente-limite" class="form-label small">Límite <span id="unidad-limite">(hrs)</span></label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="componente-limite" name="limite">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-notificacion" class="form-label small">Notificación (hrs)</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="equipo-notificacion" name="notificacion">
+                                        <label for="componente-notificacion" class="form-label small">Notificación <span id="unidad-notificacion">(hrs)</span></label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="componente-notificacion" name="notificacion">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-mantenimiento" class="form-label small">Mantenimiento (hrs)</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="equipo-mantenimiento" name="mantenimiento">
+                                        <label for="componente-mantenimiento" class="form-label small">Mantenimiento <span id="unidad-mantenimiento">(hrs)</span></label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="componente-mantenimiento" name="mantenimiento">
                                     </div>
                                 </div>
 
                                 <!-- Observaciones -->
                                 <div class="col-12">
                                     <div class="form-group mb-2">
-                                        <label for="equipo-observaciones" class="form-label small">Observaciones</label>
-                                        <textarea class="form-control form-control-sm" id="equipo-observaciones" name="observaciones" rows="3"></textarea>
+                                        <label for="componente-observaciones" class="form-label small">Observaciones</label>
+                                        <textarea class="form-control form-control-sm" id="componente-observaciones" name="observaciones" rows="3"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -295,12 +270,12 @@ include_once '../../../includes/topbar.php';
                         <!-- Columna derecha (imagen) -->
                         <div class="col-md-4">
                             <div class="form-group mb-2">
-                                <label class="form-label small">Imagen del Equipo</label>
-                                <div class="image-upload-container" id="container-equipo-imagen">
+                                <label class="form-label small">Imagen del Componente</label>
+                                <div class="image-upload-container" id="container-componente-imagen">
                                     <div class="image-upload-preview">
-                                        <img src="<?php echo $baseUrl; ?>assets/img/equipos/equipos/default.png"
+                                        <img src="<?php echo $baseUrl; ?>assets/img/equipos/componentes/default.png"
                                             alt="Vista previa"
-                                            id="preview-equipo-imagen"
+                                            id="preview-componente-imagen"
                                             class="image-preview">
                                         <div class="image-upload-overlay">
                                             <div class="image-upload-buttons">
@@ -316,8 +291,8 @@ include_once '../../../includes/topbar.php';
                                             </div>
                                         </div>
                                     </div>
-                                    <input type="file" name="imagen" id="input-equipo-imagen" class="image-upload-input" accept="image/*">
-                                    <input type="hidden" name="imagen_existing" id="existing-equipo-imagen" value="">
+                                    <input type="file" name="imagen" id="input-componente-imagen" class="image-upload-input" accept="image/*">
+                                    <input type="hidden" name="imagen_existing" id="existing-componente-imagen" value="">
                                 </div>
                             </div>
                         </div>
@@ -326,26 +301,26 @@ include_once '../../../includes/topbar.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" id="btn-guardar-equipo" class="btn btn-sm btn-primary">Guardar</button>
+                <button type="button" id="btn-guardar-componente" class="btn btn-sm btn-primary">Guardar</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para ver detalles del equipo -->
-<div class="modal fade" id="modal-detalle-equipo" tabindex="-1" aria-labelledby="modal-detalle-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<!-- Modal para ver detalles del componente -->
+<div class="modal fade" id="modal-detalle-componente" tabindex="-1" aria-labelledby="modal-detalle-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modal-detalle-titulo">Detalles del Equipo</h5>
+                <h5 class="modal-title" id="modal-detalle-titulo">Detalles del Componente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <!-- Información del equipo -->
+                    <!-- Información del componente -->
                     <div class="col-md-4 text-center mb-3">
-                        <div class="equipo-imagen-container">
-                            <img id="detalle-imagen" src="<?php echo $baseUrl; ?>assets/img/equipos/equipos/default.png" alt="Imagen del equipo" class="img-fluid rounded mb-2">
+                        <div class="componente-imagen-container">
+                            <img id="detalle-imagen" src="<?php echo $baseUrl; ?>assets/img/equipos/componentes/default.png" alt="Imagen del componente" class="img-fluid rounded mb-2">
                             <button type="button" id="btn-ver-imagen" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-search-plus me-1"></i> Ampliar
                             </button>
@@ -355,7 +330,7 @@ include_once '../../../includes/topbar.php';
                         </div>
                     </div>
                     <div class="col-md-8">
-                        <h4 id="detalle-nombre" class="fs-5 mb-3">Nombre del Equipo</h4>
+                        <h4 id="detalle-nombre" class="fs-5 mb-3">Nombre del Componente</h4>
 
                         <div class="row g-2">
                             <div class="col-md-6">
@@ -366,8 +341,8 @@ include_once '../../../includes/topbar.php';
                             </div>
                             <div class="col-md-6">
                                 <div class="detalle-item">
-                                    <span class="detalle-label">Categoría:</span>
-                                    <span id="detalle-categoria" class="detalle-valor">-</span>
+                                    <span class="detalle-label">Equipo:</span>
+                                    <span id="detalle-equipo" class="detalle-valor">-</span>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -392,30 +367,6 @@ include_once '../../../includes/topbar.php';
                                 <div class="detalle-item">
                                     <span class="detalle-label">Número de Serie:</span>
                                     <span id="detalle-serie" class="detalle-valor">-</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detalle-item">
-                                    <span class="detalle-label">Capacidad:</span>
-                                    <span id="detalle-capacidad" class="detalle-valor">-</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detalle-item">
-                                    <span class="detalle-label">Fase:</span>
-                                    <span id="detalle-fase" class="detalle-valor">-</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detalle-item">
-                                    <span class="detalle-label">Línea Eléctrica:</span>
-                                    <span id="detalle-linea" class="detalle-valor">-</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detalle-item">
-                                    <span class="detalle-label">Ubicación:</span>
-                                    <span id="detalle-ubicacion" class="detalle-valor">-</span>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -458,34 +409,9 @@ include_once '../../../includes/topbar.php';
                         </div>
                     </div>
                 </div>
-
-                <!-- Componentes asociados -->
-                <div class="mt-4">
-                    <h5 class="fs-6 mb-3">Componentes Asociados</h5>
-                    <div class="table-responsive">
-                        <table id="componentes-table" class="table table-sm table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Código</th>
-                                    <th>Nombre</th>
-                                    <th>Tipo</th>
-                                    <th>Estado</th>
-                                    <th>Orómetro</th>
-                                    <th>Próximo Mant.</th>
-                                </tr>
-                            </thead>
-                            <tbody id="componentes-body">
-                                <!-- Los componentes se cargarán dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="sin-componentes" class="text-center py-3 d-none">
-                        <p class="text-muted mb-0">Este equipo no tiene componentes asociados.</p>
-                    </div>
-                </div>
             </div>
             <div class="modal-footer">
-                <?php if (tienePermiso('equipos.editar')): ?>
+                <?php if (tienePermiso('componentes.editar')): ?>
                     <button type="button" id="btn-editar-desde-detalle" class="btn btn-sm btn-primary">
                         <i class="bi bi-pencil me-1"></i> Editar
                     </button>
@@ -505,7 +431,7 @@ include_once '../../../includes/topbar.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>¿Está seguro que desea eliminar este equipo?</p>
+                <p>¿Está seguro que desea eliminar este componente?</p>
                 <p class="text-danger small mb-0">Esta acción no se puede deshacer.</p>
             </div>
             <div class="modal-footer">

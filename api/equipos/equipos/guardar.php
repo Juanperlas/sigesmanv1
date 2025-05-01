@@ -1,7 +1,10 @@
 <?php
 // Incluir archivos necesarios
-require_once '../../db/funciones.php';
-require_once '../../db/conexion.php';
+require_once '../../../db/funciones.php';
+require_once '../../../db/conexion.php';
+
+// Establecer cabeceras para respuesta JSON
+header('Content-Type: application/json');
 
 // Verificar si es una solicitud AJAX
 $esAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
@@ -9,21 +12,21 @@ $esAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
 
 if (!$esAjax) {
     http_response_code(403);
-    echo json_encode(['error' => 'Acceso no permitido']);
+    echo json_encode(['success' => false, 'message' => 'Acceso no permitido']);
     exit;
 }
 
 // Verificar autenticación
 if (!estaAutenticado()) {
     http_response_code(401);
-    echo json_encode(['error' => 'No autenticado']);
+    echo json_encode(['success' => false, 'message' => 'No autenticado']);
     exit;
 }
 
 // Verificar método de solicitud
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['error' => 'Método no permitido']);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
     exit;
 }
 
@@ -31,11 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $id = isset($_POST['id']) && !empty($_POST['id']) ? intval($_POST['id']) : null;
 if ($id && !tienePermiso('equipos.editar')) {
     http_response_code(403);
-    echo json_encode(['error' => 'No tiene permisos para editar equipos']);
+    echo json_encode(['success' => false, 'message' => 'No tiene permisos para editar equipos']);
     exit;
 } elseif (!$id && !tienePermiso('equipos.crear')) {
     http_response_code(403);
-    echo json_encode(['error' => 'No tiene permisos para crear equipos']);
+    echo json_encode(['success' => false, 'message' => 'No tiene permisos para crear equipos']);
     exit;
 }
 
@@ -44,7 +47,23 @@ $camposRequeridos = ['codigo', 'nombre', 'categoria_id', 'tipo_equipo', 'estado'
 foreach ($camposRequeridos as $campo) {
     if (!isset($_POST[$campo]) || empty($_POST[$campo])) {
         http_response_code(400);
-        echo json_encode(['error' => 'El campo ' . $campo . ' es requerido']);
+        echo json_encode(['success' => false, 'message' => 'El campo ' . $campo . ' es requerido']);
+        exit;
+    }
+}
+
+// Validar tamaño y tipo de archivo solo si se subió una nueva imagen
+$maxFileSize = 2 * 1024 * 1024; // 2MB
+$allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK && $_FILES['imagen']['size'] > 0) {
+    if ($_FILES['imagen']['size'] > $maxFileSize) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'La imagen es demasiado grande. El tamaño máximo es 2MB.']);
+        exit;
+    }
+    if (!in_array($_FILES['imagen']['type'], $allowedTypes)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Tipo de archivo no permitido. Por favor, seleccione una imagen válida (JPEG, PNG, GIF, WEBP).']);
         exit;
     }
 }
@@ -74,24 +93,24 @@ $datos = [
 $validTipos = ['general', 'maquina', 'motor', 'chancadora', 'pulverizadora', 'molino', 'remolienda', 'icon'];
 if (!in_array($datos['tipo_equipo'], $validTipos)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Tipo de equipo inválido']);
+    echo json_encode(['success' => false, 'message' => 'Tipo de equipo inválido']);
     exit;
 }
 
 // Validar campos numéricos
 if (isset($datos['limite']) && ($datos['limite'] < 0 || $datos['limite'] > 1000000)) {
     http_response_code(400);
-    echo json_encode(['error' => 'El límite debe estar entre 0 y 1,000,000']);
+    echo json_encode(['success' => false, 'message' => 'El límite debe estar entre 0 y 1,000,000']);
     exit;
 }
 if (isset($datos['notificacion']) && ($datos['notificacion'] < 0 || $datos['notificacion'] > 1000)) {
     http_response_code(400);
-    echo json_encode(['error' => 'La notificación debe estar entre 0 y 1,000']);
+    echo json_encode(['success' => false, 'message' => 'La notificación debe estar entre 0 y 1,000']);
     exit;
 }
 if (isset($datos['mantenimiento']) && $datos['mantenimiento'] < 0) {
     http_response_code(400);
-    echo json_encode(['error' => 'El mantenimiento debe ser mayor o igual a 0']);
+    echo json_encode(['success' => false, 'message' => 'El mantenimiento debe ser mayor o igual a 0']);
     exit;
 }
 
@@ -102,56 +121,121 @@ if (isset($datos['mantenimiento']) && $datos['mantenimiento'] > 0) {
     $datos['proximo_orometro'] = null;
 }
 
-// Conexión a la base de datos
-$conexion = new Conexion();
+try {
+    // Conexión a la base de datos
+    $conexion = new Conexion();
 
-// Verificar si el código ya existe (excepto para el mismo equipo en caso de edición)
-$sqlVerificarCodigo = "SELECT id FROM equipos WHERE codigo = ? AND id != ?";
-$equipoExistente = $conexion->selectOne($sqlVerificarCodigo, [$datos['codigo'], $id ?: 0]);
+    // Verificar si el código ya existe (excepto para el mismo equipo en caso de edición)
+    $sqlVerificarCodigo = "SELECT id FROM equipos WHERE codigo = ? AND id != ?";
+    $equipoExistente = $conexion->selectOne($sqlVerificarCodigo, [$datos['codigo'], $id ?: 0]);
 
-if ($equipoExistente) {
-    http_response_code(400);
-    echo json_encode(['error' => 'El código ya está en uso por otro equipo']);
-    exit;
-}
-
-// Procesar imagen si se ha subido
-$imagenGuardada = null;
-$imageBasePath = __DIR__ . '/../../Uploads/equipos/';
-$imageUrlPrefix = 'Uploads/equipos/';
-if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
-    $directorioDestino = $imageBasePath;
-
-    // Crear directorio si no existe
-    if (!file_exists($directorioDestino)) {
-        mkdir($directorioDestino, 0755, true);
+    if ($equipoExistente) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'El código ya está en uso por otro equipo']);
+        exit;
     }
 
-    // Generar nombre único para la imagen
-    $extension = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-    $nombreArchivo = 'equipo_' . time() . '_' . uniqid() . '.' . $extension;
-    $rutaCompleta = $directorioDestino . $nombreArchivo;
+    // Procesar imagen si se ha subido
+    $imagenGuardada = null;
+    $imageBasePath = __DIR__ . '/../../../assets/img/equipos/equipos/';
+    $imageUrlPrefix = 'assets/img/equipos/equipos/';
 
-    // Mover archivo subido
-    if (move_uploaded_file($_FILES['imagen']['tmp_name'], $rutaCompleta)) {
+    // Verificar si existe el directorio, si no, crearlo
+    if (!file_exists($imageBasePath)) {
+        if (!mkdir($imageBasePath, 0755, true)) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al crear el directorio para imágenes']);
+            exit;
+        }
+    }
+
+    // Verificar permisos de escritura
+    if (!is_writable($imageBasePath)) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'El directorio de imágenes no tiene permisos de escritura']);
+        exit;
+    }
+
+    // Verificar si se ha subido una nueva imagen
+    if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK && $_FILES['imagen']['size'] > 0) {
+        // Generar nombre único para la imagen
+        $extension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+        $nombreArchivo = 'equipo_' . time() . '_' . uniqid() . '.' . $extension;
+        $rutaCompleta = $imageBasePath . $nombreArchivo;
+
+        // Si estamos editando, obtener la imagen anterior
+        $imagenAnterior = null;
+        if ($id) {
+            $sqlImagenActual = "SELECT imagen FROM equipos WHERE id = ?";
+            $stmtImagen = $conexion->getConexion()->prepare($sqlImagenActual);
+            $stmtImagen->execute([$id]);
+            $resultImagen = $stmtImagen->fetch(PDO::FETCH_ASSOC);
+            if ($resultImagen && !empty($resultImagen['imagen'])) {
+                $imagenAnterior = $resultImagen['imagen'];
+            }
+        }
+
+        // Mover archivo subido
+        if (!move_uploaded_file($_FILES['imagen']['tmp_name'], $rutaCompleta)) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al mover la imagen al servidor']);
+            exit;
+        }
+
         $imagenGuardada = $imageUrlPrefix . $nombreArchivo;
         $datos['imagen'] = $imagenGuardada;
+
+        // Eliminar imagen anterior si existe
+        if ($imagenAnterior) {
+            $rutaImagenAnterior = __DIR__ . '/../../../' . $imagenAnterior;
+            if (file_exists($rutaImagenAnterior)) {
+                if (!unlink($rutaImagenAnterior)) {
+                    error_log("No se pudo eliminar la imagen anterior: " . $rutaImagenAnterior);
+                }
+            }
+        }
+    } elseif (isset($_POST['existing_imagen']) && !empty($_POST['existing_imagen']) && (!isset($_POST['removed_imagen']) || $_POST['removed_imagen'] != '1')) {
+        // Mantener la imagen existente
+        $rutaExistente = sanitizar($_POST['existing_imagen']);
+        $prefijo = '/sigesmanv1/';
+        if (strpos($rutaExistente, $prefijo) === 0) {
+            $rutaExistente = substr($rutaExistente, strlen($prefijo));
+        }
+        $datos['imagen'] = $rutaExistente;
+    } elseif (isset($_POST['removed_imagen']) && $_POST['removed_imagen'] == '1') {
+        // Si se marcó para eliminar la imagen
+        $datos['imagen'] = null;
+        if (isset($_POST['existing_imagen']) && !empty($_POST['existing_imagen'])) {
+            $rutaExistente = sanitizar($_POST['existing_imagen']);
+            $prefijo = '/sigesmanv1/';
+            if (strpos($rutaExistente, $prefijo) === 0) {
+                $rutaExistente = substr($rutaExistente, strlen($prefijo));
+            }
+            $rutaImagen = __DIR__ . '/../../../' . $rutaExistente;
+            if (file_exists($rutaImagen)) {
+                if (!unlink($rutaImagen)) {
+                    error_log("No se pudo eliminar la imagen existente: " . $rutaImagen);
+                }
+            }
+        }
+    } else {
+        // No se subió imagen nueva ni hay imagen existente
+        $datos['imagen'] = null;
     }
-}
 
-// Iniciar transacción
-$conexion->getConexion()->beginTransaction();
+    // Iniciar transacción
+    $conexion->getConexion()->beginTransaction();
 
-try {
     if ($id) {
         // Actualizar equipo existente
-        if (!isset($datos['imagen'])) {
+        if (!isset($datos['imagen']) && !isset($_POST['removed_imagen'])) {
+            // Si no se ha subido una nueva imagen y no se ha marcado para eliminar, mantener la actual
             unset($datos['imagen']);
-        } else {
-            // Eliminar imagen anterior si existe
+        } elseif (isset($datos['imagen']) && $imagenGuardada) {
+            // Si se ha subido una nueva imagen, eliminar la anterior
             $equipoAnterior = $conexion->selectOne("SELECT imagen FROM equipos WHERE id = ?", [$id]);
-            if ($equipoAnterior && !empty($equipoAnterior['imagen']) && file_exists('../../' . $equipoAnterior['imagen'])) {
-                unlink('../../' . $equipoAnterior['imagen']);
+            if ($equipoAnterior && !empty($equipoAnterior['imagen']) && file_exists('../../../' . $equipoAnterior['imagen'])) {
+                unlink('../../../' . $equipoAnterior['imagen']);
             }
         }
 
@@ -175,18 +259,18 @@ try {
     ];
 
     // Enviar respuesta
-    header('Content-Type: application/json');
     echo json_encode($response);
 } catch (Exception $e) {
     // Revertir transacción en caso de error
-    $conexion->getConexion()->rollBack();
+    if (isset($conexion) && $conexion->getConexion()) {
+        $conexion->getConexion()->rollBack();
+    }
 
     // Eliminar imagen subida si hubo error
-    if ($imagenGuardada && file_exists('../../' . $imagenGuardada)) {
-        unlink('../../' . $imagenGuardada);
+    if (isset($imagenGuardada) && $imagenGuardada && file_exists('../../../' . $imagenGuardada)) {
+        unlink('../../../' . $imagenGuardada);
     }
 
     http_response_code(500);
-    echo json_encode(['error' => 'Error al guardar el equipo: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error al guardar el equipo: ' . $e->getMessage()]);
 }
-?>

@@ -4,95 +4,102 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   // Inicializar componentes
-  initSidebar()
-  initDropdowns()
-  initAlerts()
-  initMobileSearch()
-  
+  initSidebar();
+  initDropdowns();
+  initAlerts();
+  initMobileSearch();
+
   // Ocultar el preloader cuando la página esté cargada
-  hidePreloader()
-})
+  hidePreloader();
+});
 
 /**
  * Inicializa la funcionalidad del sidebar
  */
 function initSidebar() {
-  const mobileToggle = document.getElementById("sidebarToggle")
-  const desktopToggle = document.getElementById("sidebarToggleLg")
-  const sidebar = document.querySelector(".sidebar")
-  const overlay = document.createElement("div")
-  overlay.className = "sidebar-overlay"
+  const mobileToggle = document.getElementById("sidebarToggle");
+  const desktopToggle = document.getElementById("sidebarToggleLg");
+  const sidebar = document.querySelector(".sidebar");
+  const overlay = document.createElement("div");
+  overlay.className = "sidebar-overlay";
 
   if (sidebar) {
-    sidebar.after(overlay)
+    sidebar.after(overlay);
   }
 
   // Manejador para toggle móvil
   if (mobileToggle && sidebar) {
     mobileToggle.addEventListener("click", (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      sidebar.classList.toggle("show")
-      document.body.style.overflow = sidebar.classList.contains("show") ? "hidden" : ""
-    })
+      e.preventDefault();
+      e.stopPropagation();
+      sidebar.classList.toggle("show");
+      document.body.style.overflow = sidebar.classList.contains("show")
+        ? "hidden"
+        : "";
+    });
   }
 
   // Manejador para toggle desktop
   if (desktopToggle) {
     desktopToggle.addEventListener("click", (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      document.body.classList.toggle("sidebar-collapsed")
+      e.preventDefault();
+      e.stopPropagation();
+      document.body.classList.toggle("sidebar-collapsed");
       localStorage.setItem(
         "sidebar-collapsed",
-        document.body.classList.contains("sidebar-collapsed") ? "true" : "false",
-      )
-    })
+        document.body.classList.contains("sidebar-collapsed") ? "true" : "false"
+      );
+    });
   }
 
   // Cerrar sidebar al hacer click en el overlay
   overlay.addEventListener("click", () => {
-    sidebar.classList.remove("show")
-    document.body.style.overflow = ""
-  })
+    sidebar.classList.remove("show");
+    document.body.style.overflow = "";
+  });
 
   // Restaurar estado del sidebar
-  const savedState = localStorage.getItem("sidebar-collapsed")
+  const savedState = localStorage.getItem("sidebar-collapsed");
   if (savedState === "true" && window.innerWidth >= 992) {
-    document.body.classList.add("sidebar-collapsed")
+    document.body.classList.add("sidebar-collapsed");
   }
 
   // Inicializar submenús
-  initSubmenus()
+  initSubmenus();
 }
 
 /**
  * Inicializa los submenús del sidebar
  */
 function initSubmenus() {
-  const submenuToggles = document.querySelectorAll(".sidebar-submenu-toggle")
+  const submenuToggles = document.querySelectorAll(".sidebar-submenu-toggle");
 
   submenuToggles.forEach((toggle) => {
     toggle.addEventListener("click", function (e) {
-      e.preventDefault()
-      e.stopPropagation()
+      e.preventDefault();
+      e.stopPropagation();
 
       // En móvil o cuando no está colapsado, toggle normal del submenu
-      if (window.innerWidth < 992 || !document.body.classList.contains("sidebar-collapsed")) {
-        const menuItem = this.closest(".sidebar-menu-item")
-        menuItem.classList.toggle("active")
+      if (
+        window.innerWidth < 992 ||
+        !document.body.classList.contains("sidebar-collapsed")
+      ) {
+        const menuItem = this.closest(".sidebar-menu-item");
+        menuItem.classList.toggle("active");
       }
-    })
-  })
+    });
+  });
 
   // Abrir submenu si hay un item activo
-  const activeSubmenuItems = document.querySelectorAll(".sidebar-submenu-item.active")
+  const activeSubmenuItems = document.querySelectorAll(
+    ".sidebar-submenu-item.active"
+  );
   activeSubmenuItems.forEach((item) => {
-    const parentMenuItem = item.closest(".sidebar-menu-item")
+    const parentMenuItem = item.closest(".sidebar-menu-item");
     if (parentMenuItem) {
-      parentMenuItem.classList.add("active")
+      parentMenuItem.classList.add("active");
     }
-  })
+  });
 }
 
 /**
@@ -100,47 +107,51 @@ function initSubmenus() {
  */
 function initDropdowns() {
   // Check if Bootstrap is available
-  let bootstrap
+  let bootstrap;
   try {
-    bootstrap = window.bootstrap
+    bootstrap = window.bootstrap;
   } catch (e) {
-    bootstrap = undefined
+    bootstrap = undefined;
   }
 
   // Si Bootstrap no está disponible, implementar manualmente
   if (typeof bootstrap === "undefined") {
-    console.warn("Bootstrap is not available. Implementing dropdown functionality manually.")
+    console.warn(
+      "Bootstrap is not available. Implementing dropdown functionality manually."
+    );
 
-    const dropdownToggles = document.querySelectorAll('[data-bs-toggle="dropdown"]')
+    const dropdownToggles = document.querySelectorAll(
+      '[data-bs-toggle="dropdown"]'
+    );
 
     dropdownToggles.forEach((toggle) => {
       toggle.addEventListener("click", function (e) {
-        e.preventDefault()
-        e.stopPropagation()
+        e.preventDefault();
+        e.stopPropagation();
 
-        const parent = this.closest(".dropdown")
-        const menu = parent.querySelector(".dropdown-menu")
+        const parent = this.closest(".dropdown");
+        const menu = parent.querySelector(".dropdown-menu");
 
         // Cerrar todos los otros dropdowns
         document.querySelectorAll(".dropdown-menu.show").forEach((openMenu) => {
           if (openMenu !== menu) {
-            openMenu.classList.remove("show")
+            openMenu.classList.remove("show");
           }
-        })
+        });
 
         // Toggle el dropdown actual
-        menu.classList.toggle("show")
-      })
-    })
+        menu.classList.toggle("show");
+      });
+    });
 
     // Cerrar dropdowns al hacer clic fuera
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".dropdown")) {
         document.querySelectorAll(".dropdown-menu.show").forEach((menu) => {
-          menu.classList.remove("show")
-        })
+          menu.classList.remove("show");
+        });
       }
-    })
+    });
   } else {
     // Bootstrap is available, let it handle dropdowns
   }
@@ -150,64 +161,64 @@ function initDropdowns() {
  * Inicializa las alertas para que se puedan cerrar
  */
 function initAlerts() {
-  const closeButtons = document.querySelectorAll(".alert .btn-close")
+  const closeButtons = document.querySelectorAll(".alert .btn-close");
 
   closeButtons.forEach((button) => {
     button.addEventListener("click", function () {
-      const alert = this.closest(".alert")
+      const alert = this.closest(".alert");
 
       // Añadir clase para animación de fade out
-      alert.classList.add("fade")
+      alert.classList.add("fade");
 
       // Remover el alert después de la animación
       setTimeout(() => {
-        alert.remove()
-      }, 150)
-    })
-  })
+        alert.remove();
+      }, 150);
+    });
+  });
 
   // Auto-cerrar alertas después de 5 segundos
   document.querySelectorAll(".alert:not(.alert-important)").forEach((alert) => {
     setTimeout(() => {
       if (alert) {
         // Añadir clase para animación de fade out
-        alert.classList.add("fade")
+        alert.classList.add("fade");
 
         // Remover el alert después de la animación
         setTimeout(() => {
           if (alert.parentNode) {
-            alert.remove()
+            alert.remove();
           }
-        }, 150)
+        }, 150);
       }
-    }, 5000)
-  })
+    }, 5000);
+  });
 }
 
 /**
  * Inicializa la búsqueda móvil
  */
 function initMobileSearch() {
-  const searchToggle = document.getElementById("searchToggle")
-  const closeSearch = document.getElementById("closeSearch")
-  const mobileSearchBar = document.querySelector(".mobile-search-bar")
+  const searchToggle = document.getElementById("searchToggle");
+  const closeSearch = document.getElementById("closeSearch");
+  const mobileSearchBar = document.querySelector(".mobile-search-bar");
 
   if (searchToggle && mobileSearchBar) {
     searchToggle.addEventListener("click", () => {
-      mobileSearchBar.classList.add("show")
-      searchToggle.classList.add("active")
-      mobileSearchBar.querySelector("input").focus()
-    })
+      mobileSearchBar.classList.add("show");
+      searchToggle.classList.add("active");
+      mobileSearchBar.querySelector("input").focus();
+    });
   }
 
   if (closeSearch && mobileSearchBar) {
     closeSearch.addEventListener("click", () => {
-      mobileSearchBar.classList.remove("show")
-      const searchToggle = document.getElementById("searchToggle")
+      mobileSearchBar.classList.remove("show");
+      const searchToggle = document.getElementById("searchToggle");
       if (searchToggle) {
-        searchToggle.classList.remove("active")
+        searchToggle.classList.remove("active");
       }
-    })
+    });
   }
 }
 
@@ -215,10 +226,10 @@ function initMobileSearch() {
  * Oculta el preloader
  */
 function hidePreloader() {
-  const preloader = document.querySelector(".loader-bg")
+  const preloader = document.querySelector("#preloader");
   if (preloader) {
     setTimeout(() => {
-      preloader.style.display = "none"
-    }, 500)
+      preloader.style.display = "none";
+    }, 500);
   }
 }

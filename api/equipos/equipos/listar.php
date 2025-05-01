@@ -37,6 +37,7 @@ $orderDir = isset($_POST['order'][0]['dir']) ? $_POST['order'][0]['dir'] : 'asc'
 
 // Mapeo de columnas para ordenamiento
 $columns = [
+    0 => 'e.id',
     1 => 'e.codigo',
     2 => 'e.nombre',
     3 => 'e.tipo_equipo',
@@ -86,8 +87,9 @@ $totalFiltered = count($conexion->select($sqlFilteredCount, $params));
 if (isset($columns[$orderColumn])) {
     $sql .= " ORDER BY " . $columns[$orderColumn] . " " . $orderDir;
 } else {
-    $sql .= " ORDER BY e.nombre ASC";
+    $sql .= " ORDER BY e.id DESC";
 }
+
 $sql .= " LIMIT " . $start . ", " . $length;
 
 // Ejecutar la consulta
@@ -124,4 +126,3 @@ $response = [
 // Enviar respuesta
 header('Content-Type: application/json');
 echo json_encode($response);
-?>

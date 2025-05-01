@@ -13,7 +13,7 @@ $usuario = getUsuarioActual();
 <!-- Sidebar Menu -->
 <div class="sidebar">
     <div class="sidebar-header">
-        <a href="<?php echo getPageUrl('dashboard.php'); ?>" class="sidebar-logo" data-spa-link>
+        <a href="<?php echo getPageUrl('dashboard.php'); ?>" class="sidebar-logo">
             <img src="<?php echo getAssetUrl('assets/img/logo.png'); ?>" alt="SIGESMANV1" class="logo logo-expanded" />
             <img src="<?php echo getAssetUrl('assets/img/logo-icon.png'); ?>" alt="SIGESMANV1" class="logo logo-collapsed" />
         </a>
@@ -25,7 +25,7 @@ $usuario = getUsuarioActual();
             <div class="sidebar-section-title">General</div>
             <ul class="sidebar-menu">
                 <li class="sidebar-menu-item <?php echo $pagina_actual == 'dashboard' ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('dashboard.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                    <a href="<?php echo getPageUrl('dashboard.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-house-door"></i>
                         <span>Dashboard</span>
                     </a>
@@ -38,13 +38,13 @@ $usuario = getUsuarioActual();
             <div class="sidebar-section-title">Equipos</div>
             <ul class="sidebar-menu">
                 <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/equipos/equipos' ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/equipos/equipos/index.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                    <a href="<?php echo getPageUrl('modulos/equipos/equipos/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-truck"></i>
                         <span>Equipos</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/equipos/componentes' ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/equipos/componentes/index.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                    <a href="<?php echo getPageUrl('modulos/equipos/componentes/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-gear"></i>
                         <span>Componentes</span>
                     </a>
@@ -57,19 +57,19 @@ $usuario = getUsuarioActual();
             <div class="sidebar-section-title">Mantenimiento</div>
             <ul class="sidebar-menu">
                 <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/mantenimiento/preventivo' ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                    <a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-tools"></i>
                         <span>Preventivo</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/mantenimiento/correctivo' ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/mantenimiento/correctivo.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                    <a href="<?php echo getPageUrl('modulos/mantenimiento/correctivo.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-exclamation-triangle"></i>
                         <span>Correctivo</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/mantenimiento/programado' ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/mantenimiento/programado.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                    <a href="<?php echo getPageUrl('modulos/mantenimiento/programado.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-calendar-check"></i>
                         <span>Programado</span>
                     </a>
@@ -83,19 +83,19 @@ $usuario = getUsuarioActual();
                 <div class="sidebar-section-title">Administración</div>
                 <ul class="sidebar-menu">
                     <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/administracion/usuarios' ? 'active' : ''; ?>">
-                        <a href="<?php echo getPageUrl('modulos/administracion/usuarios.php'); ?>" class="sidebar-menu-link" data-spa-link>
-                            <i class="bi bi-people~~people"></i>
+                        <a href="<?php echo getPageUrl('modulos/administracion/usuarios.php'); ?>" class="sidebar-menu-link">
+                            <i class="bi bi-people"></i>
                             <span>Usuarios</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/administracion/personal' ? 'active' : ''; ?>">
-                        <a href="<?php echo getPageUrl('modulos/administracion/personal.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                        <a href="<?php echo getPageUrl('modulos/administracion/personal.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-person-badge"></i>
                             <span>Personal</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/administracion/roles' ? 'active' : ''; ?>">
-                        <a href="<?php echo getPageUrl('modulos/administracion/roles.php'); ?>" class="sidebar-menu-link" data-spa-link>
+                        <a href="<?php echo getPageUrl('modulos/administracion/roles.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-shield-lock"></i>
                             <span>Roles y Permisos</span>
                         </a>

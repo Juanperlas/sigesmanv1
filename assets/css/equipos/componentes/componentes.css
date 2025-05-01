@@ -1,5 +1,5 @@
 /**
- * Estilos para el módulo de Equipos (Versión sin SPA)
+ * Estilos para el módulo de Componentes
  * SIGESMANV1
  */
 
@@ -20,7 +20,7 @@
   font-size: 0.75rem;
 }
 
-/* Estilos para la tabla de equipos */
+/* Estilos para la tabla de componentes */
 .data-table {
   font-size: 0.85rem;
 }
@@ -38,7 +38,7 @@
 }
 
 /* Estilos para las imágenes en la tabla */
-.equipo-imagen-tabla {
+.componente-imagen-tabla {
   width: 40px;
   height: 40px;
   object-fit: cover;
@@ -109,12 +109,12 @@ textarea.form-control-sm {
 }
 
 /* Estilos para la vista de detalles */
-.equipo-imagen-container {
+.componente-imagen-container {
   position: relative;
   margin-bottom: 1rem;
 }
 
-.equipo-imagen-container img {
+.componente-imagen-container img {
   max-height: 200px;
   width: auto;
   max-width: 100%;
@@ -137,21 +137,6 @@ textarea.form-control-sm {
   color: #212529;
 }
 
-/* Estilos para los componentes asociados */
-#componentes-table {
-  font-size: 0.8rem;
-}
-
-#componentes-table thead th {
-  font-weight: 600;
-  background-color: #f8f9fa;
-  padding: 0.5rem;
-}
-
-#componentes-table tbody td {
-  padding: 0.4rem 0.5rem;
-}
-
 /* Estilos para los estados */
 .badge {
   font-size: 0.75rem;
@@ -160,73 +145,22 @@ textarea.form-control-sm {
 }
 
 /* Estilos para los botones de exportación */
-.export-buttons {
+.dt-buttons {
+  gap: 5px;
   display: flex;
-  gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
+  margin-bottom: 10px;
 }
 
-.export-buttons .btn {
-  font-size: 0.8rem;
+.dt-button {
+  margin-right: 5px;
 }
 
-/* Estilos responsivos */
-@media (max-width: 767.98px) {
-  .page-title {
-    font-size: 1.25rem;
-  }
-
-  .card-body {
-    padding: 0.75rem;
-  }
-
-  .modal-dialog {
-    margin: 0.5rem;
-  }
-
-  .equipo-imagen-container img {
-    max-height: 150px;
-  }
-
-  .data-table {
-    font-size: 0.8rem;
-  }
-
-  .btn-accion {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.7rem;
-  }
-
-  /* Ajustes para la vista de detalles en móvil */
-  #detalle-nombre {
-    font-size: 1.1rem;
-    margin-top: 1rem;
-  }
-
-  .detalle-item {
-    margin-bottom: 0.4rem;
-  }
-}
-
-/* Estilos para pantallas muy pequeñas */
-@media (max-width: 575.98px) {
-  .page-header .col-auto {
-    margin-top: 0.5rem;
+@media (max-width: 768px) {
+  .dt-buttons {
+    margin-bottom: 15px;
+    justify-content: flex-start;
     width: 100%;
-  }
-
-  .page-header .btn {
-    width: 100%;
-  }
-
-  .export-buttons {
-    justify-content: center;
-  }
-
-  .export-buttons .btn {
-    flex: 1 1 auto;
   }
 }
 
@@ -242,17 +176,6 @@ textarea.form-control-sm {
 #btn-ver-imagen {
   margin-top: 0.5rem;
   font-size: 0.75rem;
-}
-
-/* Estilos para el mensaje de sin componentes */
-#sin-componentes {
-  padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 0.25rem;
-}
-
-#sin-componentes p {
-  font-size: 0.85rem;
 }
 
 /* Estilos para los tooltips */
@@ -376,4 +299,36 @@ textarea.form-control-sm {
 
 .toast-body {
   padding: 0.75rem;
+}
+/* Estilos para la barra de progreso */
+.progress {
+  background-color: #e9ecef;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
+/* Estilos para los textos de la barra de progreso */
+.progress-info {
+  font-size: 0.7rem;
+  color: #6c757d;
+}
+
+.progress-info .current {
+  font-weight: 600;
+  color: #212529;
+}
+
+.progress-info .target {
+  font-weight: 600;
+  color: #495057;
+}
+
+.progress-maintenance {
+  font-size: 0.65rem;
+  color: #6c757d;
+  font-style: italic;
 }

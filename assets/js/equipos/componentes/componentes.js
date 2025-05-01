@@ -1,6 +1,6 @@
 /**
- * Gestión de equipos
- * Funcionalidades para listar, crear, editar, ver detalles y eliminar equipos
+ * Gestión de componentes
+ * Funcionalidades para listar, crear, editar, ver detalles y eliminar componentes
  */
 
 // Declaración de variables globales (asumiendo que jQuery está disponible globalmente)
@@ -8,8 +8,8 @@ const $ = jQuery;
 
 document.addEventListener("DOMContentLoaded", () => {
   // Variables globales
-  let equiposTable;
-  let equipoActual = null;
+  let componentesTable;
+  let componenteActual = null;
   let filtrosActivos = {};
   let imageUploader = null;
 
@@ -25,12 +25,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Inicializar DataTable
   function initDataTable() {
-    equiposTable = $("#equipos-table").DataTable({
+    componentesTable = $("#componentes-table").DataTable({
       processing: true,
       serverSide: true,
       responsive: true,
       ajax: {
-        url: getUrl("api/equipos/equipos/listar.php"),
+        url: getUrl("api/equipos/componentes/listar.php"),
         type: "POST",
         data: (d) => {
           // Agregar filtros activos
@@ -56,9 +56,9 @@ document.addEventListener("DOMContentLoaded", () => {
           render: (data, type, row) => {
             const imgUrl = data
               ? data
-              : getUrl("assets/img/equipos/equipos/default.png");
-            return `<img src="${imgUrl}" class="equipo-imagen-tabla" alt="${
-              row.nombre || "Equipo"
+              : getUrl("assets/img/equipos/componentes/default.png");
+            return `<img src="${imgUrl}" class="componente-imagen-tabla" alt="${
+              row.nombre || "Componente"
             }" style="cursor: pointer;" data-image-viewer>`;
           },
         },
@@ -71,20 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
           className: "align-middle",
         },
         {
-          data: "tipo_equipo",
+          data: "equipo_nombre",
           className: "align-middle",
-          render: (data) => capitalizarPrimeraLetra(data),
         },
         {
-          data: null,
+          data: "marca",
           className: "align-middle",
-          render: (data) => {
-            let marcaModelo = "";
-            if (data.marca) marcaModelo += data.marca;
-            if (data.marca && data.modelo) marcaModelo += " / ";
-            if (data.modelo) marcaModelo += data.modelo;
-            return marcaModelo || "-";
-          },
         },
         {
           data: "estado",
@@ -97,13 +89,57 @@ document.addEventListener("DOMContentLoaded", () => {
           },
         },
         {
-          data: "orometro_actual",
-          className: "align-middle text-end",
-          render: (data) => formatearNumero(data) + " hrs",
-        },
-        {
-          data: "ubicacion",
+          // Columna de orómetro con barra de progreso
+          data: null,
           className: "align-middle",
+          render: (data, type, row) => {
+            if (type === "display") {
+              const orometroActual = parseFloat(row.orometro_actual) || 0;
+              const proximoOrometro = parseFloat(row.proximo_orometro) || 0;
+              const mantenimiento = parseFloat(row.mantenimiento) || 0;
+              const unidad = row.tipo === "kilometros" ? "km" : "hrs";
+
+              // Si no hay mantenimiento programado, solo mostrar el valor actual
+              if (mantenimiento <= 0 || proximoOrometro <= 0) {
+                return `<div class="small">${formatearNumero(
+                  orometroActual
+                )} ${unidad}</div>`;
+              }
+
+              // Calcular el progreso
+              const avance = proximoOrometro - orometroActual;
+              const porcentaje = Math.min(
+                100,
+                Math.max(0, ((mantenimiento - avance) / mantenimiento) * 100)
+              );
+
+              // Determinar el color según el porcentaje
+              let colorClase = "bg-success";
+              if (porcentaje >= 75) {
+                colorClase = "bg-danger";
+              } else if (porcentaje >= 50) {
+                colorClase = "bg-warning";
+              }
+
+              // Crear la barra de progreso
+              return `
+                <div class="small mb-1 d-flex justify-content-between">
+                  <span>${formatearNumero(orometroActual)} ${unidad}</span>
+                  <span>${formatearNumero(proximoOrometro)} ${unidad}</span>
+                </div>
+                <div class="progress" style="height: 6px;" title="Faltan ${formatearNumero(
+                  avance
+                )} ${unidad} para el próximo mantenimiento">
+                  <div class="progress-bar ${colorClase}" role="progressbar" style="width: ${porcentaje}%" 
+                    aria-valuenow="${porcentaje}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="small mt-1 text-muted">
+                  Mant. cada ${formatearNumero(mantenimiento)} ${unidad}
+                </div>
+              `;
+            }
+            return row.orometro_actual;
+          },
         },
         {
           data: null,
@@ -111,14 +147,14 @@ document.addEventListener("DOMContentLoaded", () => {
           className: "text-center align-middle",
           render: (data) => {
             let acciones = '<div class="btn-group btn-group-sm">';
-            acciones += `<button type="button" class="btn btn-info btn-accion btn-ver-equipo" data-id="${data.id}" title="Ver detalles"><i class="bi bi-eye"></i></button>`;
+            acciones += `<button type="button" class="btn btn-info btn-accion btn-ver-componente" data-id="${data.id}" title="Ver detalles"><i class="bi bi-eye"></i></button>`;
 
-            if (tienePermiso("equipos.editar")) {
-              acciones += `<button type="button" class="btn btn-primary btn-accion btn-editar-equipo" data-id="${data.id}" title="Editar"><i class="bi bi-pencil"></i></button>`;
+            if (tienePermiso("componentes.editar")) {
+              acciones += `<button type="button" class="btn btn-primary btn-accion btn-editar-componente" data-id="${data.id}" title="Editar"><i class="bi bi-pencil"></i></button>`;
             }
 
-            if (tienePermiso("equipos.eliminar")) {
-              acciones += `<button type="button" class="btn btn-danger btn-accion btn-eliminar-equipo" data-id="${data.id}" title="Eliminar"><i class="bi bi-trash"></i></button>`;
+            if (tienePermiso("componentes.eliminar")) {
+              acciones += `<button type="button" class="btn btn-danger btn-accion btn-eliminar-componente" data-id="${data.id}" title="Eliminar"><i class="bi bi-trash"></i></button>`;
             }
 
             acciones += "</div>";
@@ -182,29 +218,11 @@ document.addEventListener("DOMContentLoaded", () => {
         [10, 25, 50, 100, "Todos"],
       ],
       pageLength: 10,
-      /*initComplete: function () {
-        console.log("DataTable inicializado completamente");
-        this.api()
-          .buttons()
-          .container()
-          .appendTo("#equipos-table_wrapper .col-md-6:eq(0)");
-
-        // Delegar eventos de imágenes para ImageViewer
-        $("#equipos-table").on("click", "[data-image-viewer]", function () {
-          const src = $(this).attr("src");
-          const caption = $(this).attr("alt");
-          if (typeof imageViewer !== "undefined") {
-            imageViewer.show(src, caption);
-          } else {
-            showErrorToast("El visor de imágenes no está disponible");
-          }
-        });
-      },*/
       initComplete: function () {
         console.log("DataTable inicializado completamente");
 
         // Delegar eventos de imágenes para ImageViewer
-        $("#equipos-table").on("click", "[data-image-viewer]", function () {
+        $("#componentes-table").on("click", "[data-image-viewer]", function () {
           const src = $(this).attr("src");
           const caption = $(this).attr("alt");
           if (typeof imageViewer !== "undefined") {
@@ -213,6 +231,13 @@ document.addEventListener("DOMContentLoaded", () => {
             showErrorToast("El visor de imágenes no está disponible");
           }
         });
+
+        // Inicializar tooltips para las barras de progreso
+        $('[data-bs-toggle="tooltip"], [title]').tooltip();
+      },
+      drawCallback: function () {
+        // Reinicializar tooltips después de cada redibujado de la tabla
+        $('[data-bs-toggle="tooltip"], [title]').tooltip();
       },
     });
   }
@@ -245,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Inicializar validación del formulario
   function initFormValidation() {
-    $("#form-equipo").validate({
+    $("#form-componente").validate({
       rules: {
         codigo: {
           required: true,
@@ -257,10 +282,10 @@ document.addEventListener("DOMContentLoaded", () => {
           minlength: 3,
           maxlength: 100,
         },
-        categoria_id: {
+        equipo_id: {
           required: true,
         },
-        tipo_equipo: {
+        tipo: {
           required: true,
         },
         estado: {
@@ -297,11 +322,11 @@ document.addEventListener("DOMContentLoaded", () => {
           minlength: "El nombre debe tener al menos 3 caracteres",
           maxlength: "El nombre no puede tener más de 100 caracteres",
         },
-        categoria_id: {
-          required: "La categoría es obligatoria",
+        equipo_id: {
+          required: "El equipo es obligatorio",
         },
-        tipo_equipo: {
-          required: "El tipo de equipo es obligatorio",
+        tipo: {
+          required: "El tipo de medición es obligatorio",
         },
         estado: {
           required: "El estado es obligatorio",
@@ -338,7 +363,7 @@ document.addEventListener("DOMContentLoaded", () => {
         $(element).removeClass("is-invalid");
       },
       submitHandler: (form) => {
-        guardarEquipo();
+        guardarComponente();
         return false;
       },
     });
@@ -347,39 +372,50 @@ document.addEventListener("DOMContentLoaded", () => {
   // Inicializar componente de carga de imágenes
   function initImageUploader() {
     // Verificar si el contenedor existe
-    if (document.getElementById("container-equipo-imagen")) {
+    if (document.getElementById("container-componente-imagen")) {
       // Inicializar el componente
-      imageUploader = new ImageUpload("container-equipo-imagen", {
-        maxSize: 2 * 1024 * 1024, // 5MB
+      imageUploader = new ImageUpload("container-componente-imagen", {
+        maxSize: 2 * 1024 * 1024, // 2MB
         acceptedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
         inputName: "imagen",
-        defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
+        defaultImage: getUrl("assets/img/equipos/componentes/default.png"),
         existingImage: "",
-        uploadPath: "assets/img/equipos/equipos/",
+        uploadPath: "assets/img/equipos/componentes/",
         position: "center", // Posicionar la cámara en el centro
       });
     }
   }
 
-  // Abrir modal para crear nuevo equipo
+  // Actualizar unidades según el tipo seleccionado
+  function actualizarUnidades() {
+    const tipo = $("#componente-tipo").val();
+    const unidad = tipo === "kilometros" ? "km" : "hrs";
+
+    $("#unidad-orometro").text(`(${unidad})`);
+    $("#unidad-limite").text(`(${unidad})`);
+    $("#unidad-notificacion").text(`(${unidad})`);
+    $("#unidad-mantenimiento").text(`(${unidad})`);
+  }
+
+  // Abrir modal para crear nuevo componente
   function abrirModalCrear() {
     // Limpiar formulario
-    $("#form-equipo")[0].reset();
-    $("#equipo-id").val("");
+    $("#form-componente")[0].reset();
+    $("#componente-id").val("");
 
     // Actualizar título del modal
-    $("#modal-equipo-titulo").text("Nuevo Equipo");
+    $("#modal-componente-titulo").text("Nuevo Componente");
 
     // Inicializar componente de carga de imágenes con valores por defecto
     if (imageUploader) {
       // Reiniciar el componente con valores por defecto
-      imageUploader = new ImageUpload("container-equipo-imagen", {
+      imageUploader = new ImageUpload("container-componente-imagen", {
         maxSize: 2 * 1024 * 1024,
         acceptedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
         inputName: "imagen",
-        defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
+        defaultImage: getUrl("assets/img/equipos/componentes/default.png"),
         existingImage: "",
-        uploadPath: "assets/img/equipos/equipos/",
+        uploadPath: "assets/img/equipos/componentes/",
         position: "center", // Posicionar la cámara en el centro
       });
     } else {
@@ -387,28 +423,31 @@ document.addEventListener("DOMContentLoaded", () => {
       initImageUploader();
     }
 
+    // Actualizar unidades
+    actualizarUnidades();
+
     // Mostrar modal
-    const modalEquipo = new bootstrap.Modal(
-      document.getElementById("modal-equipo")
+    const modalComponente = new bootstrap.Modal(
+      document.getElementById("modal-componente")
     );
-    modalEquipo.show();
+    modalComponente.show();
 
     // Resetear validación
-    $("#form-equipo").validate().resetForm();
-    $("#form-equipo .is-invalid").removeClass("is-invalid");
+    $("#form-componente").validate().resetForm();
+    $("#form-componente .is-invalid").removeClass("is-invalid");
 
-    // Resetear equipo actual
-    equipoActual = null;
+    // Resetear componente actual
+    componenteActual = null;
   }
 
-  // Abrir modal para editar equipo
+  // Abrir modal para editar componente
   function abrirModalEditar(id) {
     // Mostrar indicador de carga
     showLoadingOverlay();
 
-    // Obtener datos del equipo
+    // Obtener datos del componente
     $.ajax({
-      url: getUrl("api/equipos/equipos/obtener.php"),
+      url: getUrl("api/equipos/componentes/obtener.php"),
       type: "GET",
       data: { id: id },
       dataType: "json",
@@ -417,33 +456,32 @@ document.addEventListener("DOMContentLoaded", () => {
         hideLoadingOverlay();
 
         if (response.success && response.data) {
-          const equipo = response.data;
-          equipoActual = equipo;
+          const componente = response.data;
+          componenteActual = componente;
 
           // Llenar formulario
-          $("#equipo-id").val(equipo.id);
-          $("#equipo-codigo").val(equipo.codigo);
-          $("#equipo-nombre").val(equipo.nombre);
-          $("#equipo-categoria").val(equipo.categoria_id);
-          $("#equipo-tipo").val(equipo.tipo_equipo);
-          $("#equipo-marca").val(equipo.marca);
-          $("#equipo-modelo").val(equipo.modelo);
-          $("#equipo-serie").val(equipo.numero_serie);
-          $("#equipo-capacidad").val(equipo.capacidad);
-          $("#equipo-fase").val(equipo.fase);
-          $("#equipo-linea").val(equipo.linea_electrica);
-          $("#equipo-ubicacion").val(equipo.ubicacion);
-          $("#equipo-estado").val(equipo.estado);
-          $("#equipo-orometro").val(equipo.orometro_actual);
-          $("#equipo-limite").val(equipo.limite);
-          $("#equipo-notificacion").val(equipo.notificacion);
-          $("#equipo-mantenimiento").val(equipo.mantenimiento);
-          $("#equipo-observaciones").val(equipo.observaciones);
+          $("#componente-id").val(componente.id);
+          $("#componente-codigo").val(componente.codigo);
+          $("#componente-nombre").val(componente.nombre);
+          $("#componente-equipo").val(componente.equipo_id);
+          $("#componente-tipo").val(componente.tipo);
+          $("#componente-marca").val(componente.marca);
+          $("#componente-modelo").val(componente.modelo);
+          $("#componente-serie").val(componente.numero_serie);
+          $("#componente-estado").val(componente.estado);
+          $("#componente-orometro").val(componente.orometro_actual);
+          $("#componente-limite").val(componente.limite);
+          $("#componente-notificacion").val(componente.notificacion);
+          $("#componente-mantenimiento").val(componente.mantenimiento);
+          $("#componente-observaciones").val(componente.observaciones);
+
+          // Actualizar unidades
+          actualizarUnidades();
 
           // Inicializar componente de carga de imágenes con la imagen existente
           if (imageUploader) {
             // Reiniciar el componente con la imagen existente
-            imageUploader = new ImageUpload("container-equipo-imagen", {
+            imageUploader = new ImageUpload("container-componente-imagen", {
               maxSize: 2 * 1024 * 1024,
               acceptedTypes: [
                 "image/jpeg",
@@ -452,9 +490,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 "image/webp",
               ],
               inputName: "imagen",
-              defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
-              existingImage: equipo.imagen || "",
-              uploadPath: "assets/img/equipos/equipos/",
+              defaultImage: getUrl(
+                "assets/img/equipos/componentes/default.png"
+              ),
+              existingImage: componente.imagen || "",
+              uploadPath: "assets/img/equipos/componentes/",
               position: "center", // Posicionar la cámara en el centro
             });
           } else {
@@ -462,8 +502,8 @@ document.addEventListener("DOMContentLoaded", () => {
             initImageUploader();
 
             // Actualizar con la imagen existente
-            if (imageUploader && equipo.imagen) {
-              imageUploader = new ImageUpload("container-equipo-imagen", {
+            if (imageUploader && componente.imagen) {
+              imageUploader = new ImageUpload("container-componente-imagen", {
                 maxSize: 2 * 1024 * 1024,
                 acceptedTypes: [
                   "image/jpeg",
@@ -472,29 +512,31 @@ document.addEventListener("DOMContentLoaded", () => {
                   "image/webp",
                 ],
                 inputName: "imagen",
-                defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
-                existingImage: equipo.imagen,
-                uploadPath: "assets/img/equipos/equipos/",
+                defaultImage: getUrl(
+                  "assets/img/equipos/componentes/default.png"
+                ),
+                existingImage: componente.imagen,
+                uploadPath: "assets/img/equipos/componentes/",
                 position: "center", // Posicionar la cámara en el centro
               });
             }
           }
 
           // Actualizar título del modal
-          $("#modal-equipo-titulo").text("Editar Equipo");
+          $("#modal-componente-titulo").text("Editar Componente");
 
           // Mostrar modal
-          const modalEquipo = new bootstrap.Modal(
-            document.getElementById("modal-equipo")
+          const modalComponente = new bootstrap.Modal(
+            document.getElementById("modal-componente")
           );
-          modalEquipo.show();
+          modalComponente.show();
 
           // Resetear validación
-          $("#form-equipo").validate().resetForm();
-          $("#form-equipo .is-invalid").removeClass("is-invalid");
+          $("#form-componente").validate().resetForm();
+          $("#form-componente .is-invalid").removeClass("is-invalid");
         } else {
           showErrorToast(
-            response.message || "Error al obtener los datos del equipo"
+            response.message || "Error al obtener los datos del componente"
           );
         }
       },
@@ -502,16 +544,15 @@ document.addEventListener("DOMContentLoaded", () => {
         // Ocultar indicador de carga
         hideLoadingOverlay();
         showErrorToast("Error de conexión al servidor");
-        console.error("Error al obtener equipo:", error);
+        console.error("Error al obtener componente:", error);
       },
     });
   }
 
-  // Guardar equipo (crear o actualizar)
-  // Guardar equipo (crear o actualizar)
-  function guardarEquipo() {
+  // Guardar componente (crear o actualizar)
+  function guardarComponente() {
     // Validar formulario
-    if (!$("#form-equipo").valid()) {
+    if (!$("#form-componente").valid()) {
       return;
     }
 
@@ -519,11 +560,11 @@ document.addEventListener("DOMContentLoaded", () => {
     showLoadingOverlay();
 
     // Preparar datos del formulario
-    const formData = new FormData(document.getElementById("form-equipo"));
+    const formData = new FormData(document.getElementById("form-componente"));
 
     // Enviar solicitud
     $.ajax({
-      url: getUrl("api/equipos/equipos/guardar.php"),
+      url: getUrl("api/equipos/componentes/guardar.php"),
       type: "POST",
       data: formData,
       processData: false,
@@ -535,18 +576,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (response.success) {
           // Cerrar modal
-          const modalEquipo = bootstrap.Modal.getInstance(
-            document.getElementById("modal-equipo")
+          const modalComponente = bootstrap.Modal.getInstance(
+            document.getElementById("modal-componente")
           );
-          modalEquipo.hide();
+          modalComponente.hide();
 
           // Mostrar mensaje de éxito
           showSuccessToast(response.message);
 
           // Recargar tabla
-          equiposTable.ajax.reload();
+          componentesTable.ajax.reload();
         } else {
-          showErrorToast(response.message || "Error al guardar el equipo");
+          showErrorToast(response.message || "Error al guardar el componente");
         }
       },
       error: (xhr, status, error) => {
@@ -565,19 +606,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         showErrorToast(errorMessage);
-        console.error("Error al guardar equipo:", error);
+        console.error("Error al guardar componente:", error);
       },
     });
   }
 
-  // Ver detalles del equipo
-  function verDetalleEquipo(id) {
+  // Ver detalles del componente
+  function verDetalleComponente(id) {
     // Mostrar indicador de carga
     showLoadingOverlay();
 
-    // Obtener datos del equipo
+    // Obtener datos del componente
     $.ajax({
-      url: getUrl("api/equipos/equipos/obtener.php"),
+      url: getUrl("api/equipos/componentes/obtener.php"),
       type: "GET",
       data: { id: id },
       dataType: "json",
@@ -586,55 +627,57 @@ document.addEventListener("DOMContentLoaded", () => {
         hideLoadingOverlay();
 
         if (response.success && response.data) {
-          const equipo = response.data;
-          equipoActual = equipo;
+          const componente = response.data;
+          componenteActual = componente;
 
           // Actualizar datos en el modal
-          $("#detalle-nombre").text(equipo.nombre);
-          $("#detalle-codigo").text(equipo.codigo || "-");
-          $("#detalle-categoria").text(equipo.categoria_nombre || "-");
+          $("#detalle-nombre").text(componente.nombre);
+          $("#detalle-codigo").text(componente.codigo || "-");
+          $("#detalle-equipo").text(componente.equipo_nombre || "-");
           $("#detalle-tipo").text(
-            capitalizarPrimeraLetra(equipo.tipo_equipo) || "-"
+            capitalizarPrimeraLetra(componente.tipo) || "-"
           );
-          $("#detalle-marca").text(equipo.marca || "-");
-          $("#detalle-modelo").text(equipo.modelo || "-");
-          $("#detalle-serie").text(equipo.numero_serie || "-");
-          $("#detalle-capacidad").text(equipo.capacidad || "-");
-          $("#detalle-fase").text(equipo.fase || "-");
-          $("#detalle-linea").text(equipo.linea_electrica || "-");
-          $("#detalle-ubicacion").text(equipo.ubicacion || "-");
+          $("#detalle-marca").text(componente.marca || "-");
+          $("#detalle-modelo").text(componente.modelo || "-");
+          $("#detalle-serie").text(componente.numero_serie || "-");
+
+          // Determinar unidad según el tipo
+          const unidad = componente.tipo === "kilometros" ? "km" : "hrs";
+
           $("#detalle-orometro").text(
-            equipo.orometro_actual
-              ? formatearNumero(equipo.orometro_actual) + " hrs"
-              : "0.00 hrs"
+            componente.orometro_actual
+              ? formatearNumero(componente.orometro_actual) + " " + unidad
+              : "0.00 " + unidad
           );
           $("#detalle-proximo-orometro").text(
-            equipo.proximo_orometro
-              ? formatearNumero(equipo.proximo_orometro) + " hrs"
+            componente.proximo_orometro
+              ? formatearNumero(componente.proximo_orometro) + " " + unidad
               : "-"
           );
           $("#detalle-limite").text(
-            equipo.limite ? formatearNumero(equipo.limite) + " hrs" : "-"
+            componente.limite
+              ? formatearNumero(componente.limite) + " " + unidad
+              : "-"
           );
           $("#detalle-notificacion").text(
-            equipo.notificacion
-              ? formatearNumero(equipo.notificacion) + " hrs"
+            componente.notificacion
+              ? formatearNumero(componente.notificacion) + " " + unidad
               : "-"
           );
           $("#detalle-mantenimiento").text(
-            equipo.mantenimiento
-              ? formatearNumero(equipo.mantenimiento) + " hrs"
+            componente.mantenimiento
+              ? formatearNumero(componente.mantenimiento) + " " + unidad
               : "-"
           );
-          $("#detalle-observaciones").text(equipo.observaciones || "-");
+          $("#detalle-observaciones").text(componente.observaciones || "-");
 
           // Actualizar imagen
-          if (equipo.imagen) {
-            $("#detalle-imagen").attr("src", equipo.imagen);
+          if (componente.imagen) {
+            $("#detalle-imagen").attr("src", componente.imagen);
           } else {
             $("#detalle-imagen").attr(
               "src",
-              getUrl("assets/img/equipos/equipos/default.png")
+              getUrl("assets/img/equipos/componentes/default.png")
             );
           }
 
@@ -658,23 +701,20 @@ document.addEventListener("DOMContentLoaded", () => {
           $("#detalle-estado").attr(
             "class",
             "badge rounded-pill " +
-              (estadoClases[equipo.estado] || "bg-secondary")
+              (estadoClases[componente.estado] || "bg-secondary")
           );
           $("#detalle-estado").text(
-            estadoTexto[equipo.estado] || equipo.estado
+            estadoTexto[componente.estado] || componente.estado
           );
-
-          // Cargar componentes asociados
-          cargarComponentesAsociados(id);
 
           // Mostrar modal
           const modalDetalle = new bootstrap.Modal(
-            document.getElementById("modal-detalle-equipo")
+            document.getElementById("modal-detalle-componente")
           );
           modalDetalle.show();
         } else {
           showErrorToast(
-            response.message || "Error al obtener los detalles del equipo"
+            response.message || "Error al obtener los detalles del componente"
           );
         }
       },
@@ -682,76 +722,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Ocultar indicador de carga
         hideLoadingOverlay();
         showErrorToast("Error de conexión al servidor");
-        console.error("Error al obtener detalles del equipo:", error);
+        console.error("Error al obtener detalles del componente:", error);
       },
     });
   }
 
-  // Cargar componentes asociados a un equipo
-  function cargarComponentesAsociados(equipoId) {
-    $.ajax({
-      url: getUrl("api/equipos/componentes/listar.php"),
-      type: "POST",
-      data: { equipo_id: equipoId },
-      dataType: "json",
-      success: (response) => {
-        if (response.success && response.data) {
-          const componentes = response.data;
-
-          if (componentes.length > 0) {
-            // Mostrar tabla y ocultar mensaje
-            $("#componentes-table").removeClass("d-none");
-            $("#sin-componentes").addClass("d-none");
-
-            // Limpiar tabla
-            $("#componentes-body").empty();
-
-            // Agregar componentes a la tabla
-            componentes.forEach((componente) => {
-              const row = `
-                <tr>
-                  <td>${componente.codigo || "-"}</td>
-                  <td>${componente.nombre || "-"}</td>
-                  <td>${
-                    capitalizarPrimeraLetra(componente.tipo_componente) || "-"
-                  }</td>
-                  <td><span class="badge rounded-pill ${obtenerClaseEstado(
-                    componente.estado
-                  )}">${capitalizarPrimeraLetra(componente.estado)}</span></td>
-                  <td class="text-end">${
-                    formatearNumero(componente.orometro_actual) || "0"
-                  } hrs</td>
-                  <td class="text-end">${
-                    componente.limite
-                      ? formatearNumero(componente.limite) + " hrs"
-                      : "-"
-                  }</td>
-                </tr>
-              `;
-              $("#componentes-body").append(row);
-            });
-          } else {
-            // Ocultar tabla y mostrar mensaje
-            $("#componentes-table").addClass("d-none");
-            $("#sin-componentes").removeClass("d-none");
-          }
-        } else {
-          // Ocultar tabla y mostrar mensaje
-          $("#componentes-table").addClass("d-none");
-          $("#sin-componentes").removeClass("d-none");
-        }
-      },
-      error: (xhr, status, error) => {
-        console.error("Error al cargar componentes:", error);
-        // Ocultar tabla y mostrar mensaje
-        $("#componentes-table").addClass("d-none");
-        $("#sin-componentes").removeClass("d-none");
-      },
-    });
-  }
-
-  // Eliminar equipo
-  function eliminarEquipo(id) {
+  // Eliminar componente
+  function eliminarComponente(id) {
     // Mostrar modal de confirmación
     const modalConfirmar = new bootstrap.Modal(
       document.getElementById("modal-confirmar-eliminar")
@@ -770,7 +747,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Enviar solicitud
         $.ajax({
-          url: getUrl("api/equipos/equipos/eliminar.php"),
+          url: getUrl("api/equipos/componentes/eliminar.php"),
           type: "POST",
           data: { id: id },
           dataType: "json",
@@ -783,33 +760,17 @@ document.addEventListener("DOMContentLoaded", () => {
               showSuccessToast(response.message);
 
               // Recargar tabla
-              equiposTable.ajax.reload();
+              componentesTable.ajax.reload();
             } else {
               // Mostrar mensaje de error
               showErrorToast(response.message);
-
-              // Si hay componentes asociados, mostrarlos
-              if (response.componentes && response.componentes.length > 0) {
-                let componentesHtml = '<ul class="mb-0">';
-                response.componentes.forEach((componente) => {
-                  componentesHtml += `<li>${componente}</li>`;
-                });
-                componentesHtml += "</ul>";
-
-                Swal.fire({
-                  title: "No se puede eliminar",
-                  html: `Este equipo tiene componentes asociados:<br>${componentesHtml}`,
-                  icon: "warning",
-                  confirmButtonText: "Entendido",
-                });
-              }
             }
           },
           error: (xhr, status, error) => {
             // Ocultar indicador de carga
             hideLoadingOverlay();
             showErrorToast("Error de conexión al servidor");
-            console.error("Error al eliminar equipo:", error);
+            console.error("Error al eliminar componente:", error);
           },
         });
       });
@@ -818,26 +779,29 @@ document.addEventListener("DOMContentLoaded", () => {
   // Aplicar filtros
   function aplicarFiltros() {
     // Obtener valores de filtros
+    const equipo_id = $("#filtro-equipo").val();
     const estado = $("#filtro-estado").val();
 
     // Actualizar filtros activos
     filtrosActivos = {};
+    if (equipo_id) filtrosActivos.equipo_id = equipo_id;
     if (estado) filtrosActivos.estado = estado;
 
     // Recargar tabla
-    equiposTable.ajax.reload();
+    componentesTable.ajax.reload();
   }
 
   // Limpiar filtros
   function limpiarFiltros() {
     // Restablecer valores de filtros
+    $("#filtro-equipo").val("");
     $("#filtro-estado").val("");
 
     // Limpiar filtros activos
     filtrosActivos = {};
 
     // Recargar tabla
-    equiposTable.ajax.reload();
+    componentesTable.ajax.reload();
   }
 
   // Mostrar indicador de carga
@@ -864,11 +828,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Si no existe, verificar si el botón correspondiente está presente en el DOM
-    if (permiso === "equipos.crear") {
-      return $("#btn-nuevo-equipo").length > 0;
-    } else if (permiso === "equipos.editar") {
+    if (permiso === "componentes.crear") {
+      return $("#btn-nuevo-componente").length > 0;
+    } else if (permiso === "componentes.editar") {
       return $("#btn-editar-desde-detalle").length > 0;
-    } else if (permiso === "equipos.eliminar") {
+    } else if (permiso === "componentes.eliminar") {
       return true; // Por defecto permitir eliminar
     }
 
@@ -881,46 +845,46 @@ document.addEventListener("DOMContentLoaded", () => {
   initImageUploader();
 
   // Event Listeners
-  // Botón para crear nuevo equipo
-  $("#btn-nuevo-equipo").on("click", () => {
+  // Botón para crear nuevo componente
+  $("#btn-nuevo-componente").on("click", () => {
     abrirModalCrear();
   });
 
-  // Botón para guardar equipo
-  $("#btn-guardar-equipo").on("click", () => {
-    $("#form-equipo").submit();
+  // Botón para guardar componente
+  $("#btn-guardar-componente").on("click", () => {
+    $("#form-componente").submit();
   });
 
-  // Botón para ver detalles del equipo
-  $("#equipos-table").on("click", ".btn-ver-equipo", function () {
+  // Botón para ver detalles del componente
+  $("#componentes-table").on("click", ".btn-ver-componente", function () {
     const id = $(this).data("id");
-    verDetalleEquipo(id);
+    verDetalleComponente(id);
   });
 
-  // Botón para editar equipo
-  $("#equipos-table").on("click", ".btn-editar-equipo", function () {
+  // Botón para editar componente
+  $("#componentes-table").on("click", ".btn-editar-componente", function () {
     const id = $(this).data("id");
     abrirModalEditar(id);
   });
 
-  // Botón para eliminar equipo
-  $("#equipos-table").on("click", ".btn-eliminar-equipo", function () {
+  // Botón para eliminar componente
+  $("#componentes-table").on("click", ".btn-eliminar-componente", function () {
     const id = $(this).data("id");
-    eliminarEquipo(id);
+    eliminarComponente(id);
   });
 
   // Botón para editar desde el modal de detalles
   $("#btn-editar-desde-detalle").on("click", () => {
     // Cerrar modal de detalles
     const modalDetalle = bootstrap.Modal.getInstance(
-      document.getElementById("modal-detalle-equipo")
+      document.getElementById("modal-detalle-componente")
     );
     modalDetalle.hide();
 
     // Abrir modal de edición
-    if (equipoActual && equipoActual.id) {
+    if (componenteActual && componenteActual.id) {
       setTimeout(() => {
-        abrirModalEditar(equipoActual.id);
+        abrirModalEditar(componenteActual.id);
       }, 500);
     }
   });
@@ -929,7 +893,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-ver-imagen").on("click", () => {
     const imagen = $("#detalle-imagen").attr("src");
     if (imagen && typeof imageViewer !== "undefined") {
-      imageViewer.show(imagen, "Imagen del equipo");
+      imageViewer.show(imagen, "Imagen del componente");
     }
   });
 
@@ -940,6 +904,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("#btn-limpiar-filtros").on("click", () => {
     limpiarFiltros();
+  });
+
+  // Cambio en el tipo de componente para actualizar unidades
+  $("#componente-tipo").on("change", () => {
+    actualizarUnidades();
   });
 
   // Inicializar tooltips

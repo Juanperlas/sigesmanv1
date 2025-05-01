@@ -41,23 +41,15 @@ body {
   color: #333;
 }
 
-/* Preloader - Solo para carga inicial */
-.loader-bg {
+/* Preloader - Solo la barra azul */
+.loader-track {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
-  background-color: #fff;
-  z-index: 1100;
-}
-
-.loader-track {
-  position: relative;
-  width: 100%;
   height: 3px;
-  top: 0;
   overflow: hidden;
+  z-index: 1100;
 }
 
 .loader-fill {
@@ -701,4 +693,24 @@ body.sidebar-collapsed .sidebar-submenu-link {
 #equipmentDistributionChart {
   max-height: 300px !important;
   height: 300px !important;
+}
+/* Añade esto a tu archivo CSS */
+.dt-buttons {
+  gap: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.dt-button {
+  margin-right: 5px;
+  background-color: #ff0000;
+}
+
+@media (max-width: 768px) {
+  .dt-buttons {
+    margin-bottom: 15px;
+    justify-content: flex-start;
+    width: 100%;
+  }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Componente de visualización de imágenes
  * Permite ver imágenes en pantalla completa con zoom y detalles
@@ -10,19 +11,19 @@
       <h3 id="image-viewer-title">Visualizador de imágenes</h3>
       <div class="image-viewer-actions">
         <button type="button" id="image-viewer-zoom-in" class="image-viewer-btn" title="Acercar">
-          <i class="fas fa-search-plus"></i>
+          <i class="bi bi-zoom-in"></i>
         </button>
         <button type="button" id="image-viewer-zoom-out" class="image-viewer-btn" title="Alejar">
-          <i class="fas fa-search-minus"></i>
+          <i class="bi bi-zoom-out"></i>
         </button>
         <button type="button" id="image-viewer-reset" class="image-viewer-btn" title="Restablecer">
-          <i class="fas fa-sync"></i>
+          <i class="bi bi-arrow-counterclockwise"></i>
         </button>
         <button type="button" id="image-viewer-download" class="image-viewer-btn" title="Descargar">
-          <i class="fas fa-download"></i>
+          <i class="bi bi-download"></i>
         </button>
         <button type="button" id="image-viewer-close" class="image-viewer-btn" title="Cerrar">
-          <i class="fas fa-times"></i>
+          <i class="bi bi-x-lg"></i>
         </button>
       </div>
     </div>
