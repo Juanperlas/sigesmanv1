@@ -3,6 +3,248 @@
  * SIGESMANV1
  */
 
+/* ===== TABLE STYLES ===== */
+#equipos-table_wrapper {
+  font-family: 'Exo 2', sans-serif;
+  font-size: 14px; /* Matches body font-size from styles.css */
+  line-height: 1;
+  background-color: #f0f3f8; /* Matches body background */
+}
+
+.table-responsive {
+  overflow-x: auto;
+  min-height: 0.01%;
+}
+
+#equipos-table {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0; /* Adds space between cells for distinct borders */
+  background-color: rgb(249, 251, 254); /* Matches table background */
+  border: none; /* Remove default table border */
+}
+
+#equipos-table th,
+#equipos-table td {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 17.14px;
+  padding: 2px 5px;
+  height: 23px;
+  border-radius: 2px;
+  border-width: 0.9px;
+  vertical-align: middle;
+  background-color: rgb(249, 251, 254);
+  border: 1px solid rgb(209, 224, 237); /* Individual cell border */
+  border-radius: 2px; /* Rounded corners for each cell */
+}
+
+#equipos-table thead th {
+  vertical-align: middle;
+  background-color: rgb(21, 113, 176); /* Header background */
+  color: white;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid rgb(13, 92, 148); /* Darker blue border for headers */
+}
+
+/* Hover and selected row */
+#equipos-table tbody tr:hover td,
+#equipos-table tbody tr.selected-row td {
+  background-color: rgb(240, 248, 255); /* Light blue on hover/selected */
+  border-top: 2px solid rgb(21, 113, 176);
+  border-bottom: 2px solid rgb(21, 113, 176);
+}
+
+/* Text alignment */
+.text-center {
+  text-align: center !important; /* Ensure DataTables respects alignment */
+}
+
+/* Estado badges */
+.badge {
+  display: inline-block;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  min-width: 80px;
+  text-align: center;
+  color: white;
+  border: none;
+}
+
+.estado-activo {
+  background-color: #0e6eb8; /* Blue from image */
+}
+
+.estado-mantenimiento {
+  background-color: #ff8c00; /* Orange from image */
+}
+
+.estado-averiado {
+  background-color: #e63946; /* Red from image */
+}
+
+.estado-descanso {
+  background-color: #20c997; /* Green from image */
+}
+
+/* Equipment image */
+.equipo-imagen-tabla {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Action buttons */
+.acciones {
+  white-space: nowrap;
+}
+
+.btn-accion {
+  border: none;
+  border-radius: 3px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 3px; /* Increased spacing from 1px to 3px on each side */
+  padding: 0;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.btn-ver-equipo {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-editar-equipo {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-eliminar-equipo {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* ===== DATATABLES CONTROLS ===== */
+/* Export buttons */
+.dt-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e0e6ed;
+}
+
+.dt-buttons .btn {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e6ed;
+  color: #5e6e82;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.dt-buttons .btn i {
+  margin-right: 5px;
+}
+
+.dt-buttons .btn:hover {
+  background-color: #e9ecef;
+}
+
+/* Search input */
+.dataTables_wrapper .dataTables_filter {
+  margin-left: auto;
+  padding: 10px 15px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  width: 180px;
+  padding: 8px;
+  border: none;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #5e6e82;
+  border: 1px solid #e0e6ed;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+  outline: none;
+}
+
+.dataTables_wrapper .dataTables_filter label {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dataTables_wrapper .dataTables_filter label::before {
+  content: "\f002"; /* Bootstrap Icons search icon */
+  font-family: "bootstrap-icons";
+  color: #8a94a6;
+  font-size: 14px;
+  position: absolute;
+  left: 10px;
+}
+
+/* Pagination and length menu */
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_info {
+  padding: 10px 15px;
+  border-top: 1px solid #e0e6ed;
+  font-size: 12px;
+  color: #5e6e82;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  padding: 4px 8px;
+  border: 1px solid #e0e6ed;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #ffffff;
+  color: #5e6e82;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: 4px 8px;
+  border: 1px solid #e0e6ed;
+  background-color: #ffffff;
+  color: #1571b0;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 0 2px;
+  text-decoration: none;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background-color: #1571b0;
+  color: white !important;
+  border-color: #1571b0;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+  color: #8a94a6;
+  cursor: not-allowed;
+  background-color: #f5f7fa;
+}
+
 /* Estilos generales del módulo */
 .page-header {
   margin-bottom: 1.5rem;
@@ -18,43 +260,6 @@
 
 .breadcrumb {
   font-size: 0.75rem;
-}
-
-/* Estilos para la tabla de equipos */
-.data-table {
-  font-size: 0.85rem;
-}
-
-.data-table thead th {
-  font-weight: 600;
-  background-color: #f8f9fa;
-  border-bottom-width: 1px;
-  white-space: nowrap;
-}
-
-.data-table tbody td {
-  vertical-align: middle;
-  padding: 0.5rem;
-}
-
-/* Estilos para las imágenes en la tabla */
-.equipo-imagen-tabla {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* Estilos para los botones de acción en la tabla */
-.btn-accion {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  margin-right: 0.25rem;
-}
-
-.btn-accion:last-child {
-  margin-right: 0;
 }
 
 /* Estilos para los filtros */
@@ -152,13 +357,6 @@ textarea.form-control-sm {
   padding: 0.4rem 0.5rem;
 }
 
-/* Estilos para los estados */
-.badge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.35em 0.65em;
-}
-
 /* Estilos para los botones de exportación */
 .export-buttons {
   display: flex;
@@ -170,64 +368,6 @@ textarea.form-control-sm {
 
 .export-buttons .btn {
   font-size: 0.8rem;
-}
-
-/* Estilos responsivos */
-@media (max-width: 767.98px) {
-  .page-title {
-    font-size: 1.25rem;
-  }
-
-  .card-body {
-    padding: 0.75rem;
-  }
-
-  .modal-dialog {
-    margin: 0.5rem;
-  }
-
-  .equipo-imagen-container img {
-    max-height: 150px;
-  }
-
-  .data-table {
-    font-size: 0.8rem;
-  }
-
-  .btn-accion {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.7rem;
-  }
-
-  /* Ajustes para la vista de detalles en móvil */
-  #detalle-nombre {
-    font-size: 1.1rem;
-    margin-top: 1rem;
-  }
-
-  .detalle-item {
-    margin-bottom: 0.4rem;
-  }
-}
-
-/* Estilos para pantallas muy pequeñas */
-@media (max-width: 575.98px) {
-  .page-header .col-auto {
-    margin-top: 0.5rem;
-    width: 100%;
-  }
-
-  .page-header .btn {
-    width: 100%;
-  }
-
-  .export-buttons {
-    justify-content: center;
-  }
-
-  .export-buttons .btn {
-    flex: 1 1 auto;
-  }
 }
 
 /* Estilos para la imagen en el modal de detalles */
@@ -310,29 +450,6 @@ textarea.form-control-sm {
   padding: 0.25rem 0.5rem;
 }
 
-/* Estilos para DataTables */
-.dataTables_wrapper .dataTables_length select {
-  min-width: 60px;
-  font-size: 0.85rem;
-}
-
-.dataTables_wrapper .dataTables_filter input {
-  font-size: 0.85rem;
-  padding: 0.25rem 0.5rem;
-  margin-left: 0.5rem;
-}
-
-.dataTables_wrapper .dataTables_info,
-.dataTables_wrapper .dataTables_paginate {
-  font-size: 0.85rem;
-  padding-top: 0.5rem;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.85rem;
-}
-
 /* Estilos para el loader */
 .ajax-loader {
   position: fixed;
@@ -376,4 +493,87 @@ textarea.form-control-sm {
 
 .toast-body {
   padding: 0.75rem;
+}
+
+/* ===== RESPONSIVE STYLES ===== */
+@media (max-width: 767px) {
+  #equipos-table_wrapper .dt-buttons {
+      flex-wrap: wrap;
+  }
+
+  #equipos-table_wrapper .dataTables_filter {
+      margin-left: 0;
+      margin-top: 10px;
+      width: 100%;
+  }
+
+  #equipos-table_wrapper .dataTables_filter input {
+      width: 100%;
+  }
+
+  #equipos-table_wrapper .dataTables_paginate,
+  #equipos-table_wrapper .dataTables_length,
+  #equipos-table_wrapper .dataTables_info {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+  }
+
+  #equipos-table_wrapper .dataTables_paginate {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+  }
+
+  /* Original responsive styles */
+  .page-title {
+      font-size: 1.25rem;
+  }
+
+  .card-body {
+      padding: 0.75rem;
+  }
+
+  .modal-dialog {
+      margin: 0.5rem;
+  }
+
+  .equipo-imagen-container img {
+      max-height: 150px;
+  }
+
+  .btn-accion {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+  }
+
+  /* Ajustes para la vista de detalles en móvil */
+  #detalle-nombre {
+      font-size: 1.1rem;
+      margin-top: 1rem;
+  }
+
+  .detalle-item {
+      margin-bottom: 0.4rem;
+  }
+}
+
+/* Estilos para pantallas muy pequeñas */
+@media (max-width: 575.98px) {
+  .page-header .col-auto {
+      margin-top: 0.5rem;
+      width: 100%;
+  }
+
+  .page-header .btn {
+      width: 100%;
+  }
+
+  .export-buttons {
+      justify-content: center;
+  }
+
+  .export-buttons .btn {
+      flex: 1 1 auto;
+  }
 }
