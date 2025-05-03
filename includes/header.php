@@ -11,6 +11,7 @@
     <meta name="keywords" content="mantenimiento, minería, equipos, gestión, control" />
     <meta name="author" content="SIGESMANV1" />
 
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2&display=swap" rel="stylesheet">
     <!-- Favicon -->
     <link rel="icon" href="<?php echo $baseUrl; ?>assets/img/logo-icon.png" type="image/png" />
 
