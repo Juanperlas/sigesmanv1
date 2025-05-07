@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Componente de visualización de imágenes
  * Permite ver imágenes en pantalla completa con zoom y detalles

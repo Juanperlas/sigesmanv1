@@ -3,6 +3,9 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Aplicar el estado del sidebar inmediatamente
+  applyStoredSidebarState();
+
   // Inicializar componentes
   initSidebar();
   initDropdowns();
@@ -14,18 +17,25 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
+ * Aplica el estado guardado del sidebar
+ */
+function applyStoredSidebarState() {
+  const savedState = localStorage.getItem("sidebar-collapsed");
+  if (savedState === "true") {
+    document.body.classList.add("sidebar-collapsed");
+  } else {
+    document.body.classList.remove("sidebar-collapsed");
+  }
+}
+
+/**
  * Inicializa la funcionalidad del sidebar
  */
 function initSidebar() {
   const mobileToggle = document.getElementById("sidebarToggle");
   const desktopToggle = document.getElementById("sidebarToggleLg");
   const sidebar = document.querySelector(".sidebar");
-  const overlay = document.createElement("div");
-  overlay.className = "sidebar-overlay";
-
-  if (sidebar) {
-    sidebar.after(overlay);
-  }
+  const overlay = document.querySelector(".sidebar-overlay");
 
   // Manejador para toggle móvil
   if (mobileToggle && sidebar) {
@@ -33,6 +43,7 @@ function initSidebar() {
       e.preventDefault();
       e.stopPropagation();
       sidebar.classList.toggle("show");
+      if (overlay) overlay.classList.toggle("show");
       document.body.style.overflow = sidebar.classList.contains("show")
         ? "hidden"
         : "";
@@ -53,15 +64,12 @@ function initSidebar() {
   }
 
   // Cerrar sidebar al hacer click en el overlay
-  overlay.addEventListener("click", () => {
-    sidebar.classList.remove("show");
-    document.body.style.overflow = "";
-  });
-
-  // Restaurar estado del sidebar
-  const savedState = localStorage.getItem("sidebar-collapsed");
-  if (savedState === "true" && window.innerWidth >= 992) {
-    document.body.classList.add("sidebar-collapsed");
+  if (overlay) {
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("show");
+      overlay.classList.remove("show");
+      document.body.style.overflow = "";
+    });
   }
 
   // Inicializar submenús

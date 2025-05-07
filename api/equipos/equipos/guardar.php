@@ -43,7 +43,7 @@ if ($id && !tienePermiso('equipos.editar')) {
 }
 
 // Validar campos requeridos
-$camposRequeridos = ['codigo', 'nombre', 'categoria_id', 'tipo_equipo', 'estado'];
+$camposRequeridos = ['codigo', 'nombre', 'categoria_id', 'tipo_equipo', 'estado', 'tipo_orometro'];
 foreach ($camposRequeridos as $campo) {
     if (!isset($_POST[$campo]) || empty($_POST[$campo])) {
         http_response_code(400);
@@ -82,6 +82,8 @@ $datos = [
     'linea_electrica' => isset($_POST['linea_electrica']) ? sanitizar($_POST['linea_electrica']) : null,
     'ubicacion' => isset($_POST['ubicacion']) ? sanitizar($_POST['ubicacion']) : null,
     'estado' => sanitizar($_POST['estado']),
+    'tipo_orometro' => sanitizar($_POST['tipo_orometro']),
+    'anterior_orometro' => isset($_POST['anterior_orometro']) && is_numeric($_POST['anterior_orometro']) ? floatval($_POST['anterior_orometro']) : 0,
     'orometro_actual' => isset($_POST['orometro_actual']) && is_numeric($_POST['orometro_actual']) ? floatval($_POST['orometro_actual']) : 0,
     'limite' => isset($_POST['limite']) && is_numeric($_POST['limite']) ? floatval($_POST['limite']) : null,
     'notificacion' => isset($_POST['notificacion']) && is_numeric($_POST['notificacion']) ? floatval($_POST['notificacion']) : null,
@@ -94,6 +96,14 @@ $validTipos = ['general', 'maquina', 'motor', 'chancadora', 'pulverizadora', 'mo
 if (!in_array($datos['tipo_equipo'], $validTipos)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Tipo de equipo inválido']);
+    exit;
+}
+
+// Validar tipo_orometro
+$validTiposOrometro = ['horas', 'kilometros'];
+if (!in_array($datos['tipo_orometro'], $validTiposOrometro)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Tipo de orómetro inválido']);
     exit;
 }
 
@@ -114,8 +124,12 @@ if (isset($datos['mantenimiento']) && $datos['mantenimiento'] < 0) {
     exit;
 }
 
-// Calcular proximo_orometro
-if (isset($datos['mantenimiento']) && $datos['mantenimiento'] > 0) {
+// Calcular proximo_orometro solo si no se proporcionó un valor original
+if (isset($_POST['proximo_orometro_original']) && !empty($_POST['proximo_orometro_original'])) {
+    // Mantener el valor original de proximo_orometro
+    $datos['proximo_orometro'] = floatval($_POST['proximo_orometro_original']);
+} else if (isset($datos['mantenimiento']) && $datos['mantenimiento'] > 0) {
+    // Calcular nuevo valor de proximo_orometro
     $datos['proximo_orometro'] = $datos['orometro_actual'] + $datos['mantenimiento'];
 } else {
     $datos['proximo_orometro'] = null;

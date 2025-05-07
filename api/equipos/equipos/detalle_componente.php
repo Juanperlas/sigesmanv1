@@ -21,58 +21,49 @@ if (!estaAutenticado()) {
 }
 
 // Verificar permiso
-if (!tienePermiso('equipos.ver')) {
+if (!tienePermiso('componentes.ver')) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'No tiene permisos para ver equipos']);
+    echo json_encode(['success' => false, 'message' => 'No tiene permisos para ver componentes']);
     exit;
 }
 
-// Verificar que se recibió un ID
-if (!isset($_GET['id']) || empty($_GET['id'])) {
+// Verificar que se recibió un ID de equipo
+if (!isset($_GET['equipo_id']) || empty($_GET['equipo_id'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'ID de equipo no proporcionado']);
     exit;
 }
 
-$id = intval($_GET['id']);
+$equipo_id = intval($_GET['equipo_id']);
 
 try {
-    // Obtener datos del equipo
+    // Obtener datos de los componentes del equipo
     $conexion = new Conexion();
-    $equipo = $conexion->selectOne(
-        "SELECT e.*, c.nombre as categoria_nombre
-         FROM equipos e
-         LEFT JOIN categorias_equipos c ON e.categoria_id = c.id
-         WHERE e.id = ?",
-        [$id]
-    );
-
+    
+    // Verificar si el equipo existe
+    $equipo = $conexion->selectOne("SELECT id, codigo, nombre FROM equipos WHERE id = ?", [$equipo_id]);
+    
     if (!$equipo) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Equipo no encontrado']);
         exit;
     }
-
-    // Verificar si hay imagen
-    $imagen = !empty($equipo['imagen']) && file_exists('../../../' . $equipo['imagen'])
-        ? getAssetUrl($equipo['imagen'])
-        : getAssetUrl('assets/img/equipos/equipos/default.png');
-
-    // Obtener componentes del equipo
+    
+    // Obtener todos los componentes del equipo
     $componentes = $conexion->select(
         "SELECT * FROM componentes WHERE equipo_id = ? ORDER BY codigo ASC",
-        [$id]
+        [$equipo_id]
     );
-
-    // Preparar datos de componentes
-    $componentesData = [];
+    
+    // Preparar datos de respuesta
+    $data = [];
     foreach ($componentes as $componente) {
-        // Verificar si hay imagen para el componente
-        $imagenComponente = !empty($componente['imagen']) && file_exists('../../../' . $componente['imagen'])
+        // Verificar si hay imagen
+        $imagen = !empty($componente['imagen']) && file_exists('../../../' . $componente['imagen'])
             ? getAssetUrl($componente['imagen'])
             : getAssetUrl('assets/img/equipos/componentes/default.png');
             
-        $componentesData[] = [
+        $data[] = [
             'id' => $componente['id'],
             'codigo' => $componente['codigo'],
             'nombre' => $componente['nombre'],
@@ -88,40 +79,20 @@ try {
             'notificacion' => $componente['notificacion'],
             'mantenimiento' => $componente['mantenimiento'],
             'observaciones' => $componente['observaciones'],
-            'imagen' => $imagenComponente
+            'imagen' => $imagen
         ];
     }
 
     // Preparar respuesta
     $response = [
         'success' => true,
-        'data' => [
+        'equipo' => [
             'id' => $equipo['id'],
             'codigo' => $equipo['codigo'],
-            'nombre' => $equipo['nombre'],
-            'categoria_id' => $equipo['categoria_id'],
-            'categoria_nombre' => $equipo['categoria_nombre'],
-            'tipo_equipo' => $equipo['tipo_equipo'],
-            'marca' => $equipo['marca'],
-            'modelo' => $equipo['modelo'],
-            'numero_serie' => $equipo['numero_serie'],
-            'capacidad' => $equipo['capacidad'],
-            'fase' => $equipo['fase'],
-            'linea_electrica' => $equipo['linea_electrica'],
-            'ubicacion' => $equipo['ubicacion'],
-            'estado' => $equipo['estado'],
-            'tipo_orometro' => $equipo['tipo_orometro'],
-            'anterior_orometro' => $equipo['anterior_orometro'],
-            'orometro_actual' => $equipo['orometro_actual'],
-            'proximo_orometro' => $equipo['proximo_orometro'],
-            'limite' => $equipo['limite'],
-            'notificacion' => $equipo['notificacion'],
-            'mantenimiento' => $equipo['mantenimiento'],
-            'observaciones' => $equipo['observaciones'],
-            'imagen' => $imagen
+            'nombre' => $equipo['nombre']
         ],
-        'componentes' => $componentesData,
-        'total_componentes' => count($componentesData)
+        'componentes' => $data,
+        'total' => count($data)
     ];
 
     // Enviar respuesta
@@ -129,5 +100,5 @@ try {
     echo json_encode($response);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error al obtener el equipo: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error al obtener los componentes: ' . $e->getMessage()]);
 }

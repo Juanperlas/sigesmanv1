@@ -113,7 +113,7 @@ foreach ($componentes as $componente) {
         'nombre' => $componente['nombre'],
         'equipo_id' => $componente['equipo_id'],
         'equipo_nombre' => $componente['equipo_codigo'] . ' - ' . $componente['equipo_nombre'],
-        'tipo' => $componente['tipo'],
+        'tipo' => $componente['tipo_orometro'], 
         'marca' => $componente['marca'],
         'modelo' => $componente['modelo'],
         'estado' => $componente['estado'],

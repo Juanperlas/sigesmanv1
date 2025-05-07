@@ -30,6 +30,17 @@
             <link rel="stylesheet" href="<?php echo $baseUrl . $css; ?>" />
         <?php endforeach; ?>
     <?php endif; ?>
+    
+    <!-- Aplicar estado del sidebar inmediatamente para evitar parpadeo -->
+    <script>
+        // Aplicar el estado del sidebar antes de que se cargue la página
+        (function() {
+            var sidebarState = localStorage.getItem('sidebar-collapsed');
+            if (sidebarState === 'true') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
+        })();
+    </script>
 </head>
 
 <body>

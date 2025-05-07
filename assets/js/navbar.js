@@ -5,19 +5,35 @@ document.addEventListener("DOMContentLoaded", () => {
   // Elements
   const sidebar = document.querySelector(".sidebar");
   const sidebarToggle = document.getElementById("sidebarToggle");
+  const sidebarToggleLg = document.getElementById("sidebarToggleLg");
   const sidebarClose = document.getElementById("sidebarClose");
-  const sidebarOverlay = document.getElementById("sidebarOverlay");
+  const sidebarOverlay = document.querySelector(".sidebar-overlay");
   const searchToggle = document.getElementById("searchToggle");
-  const mobileSearchBar = document.getElementById("mobileSearchBar");
+  const mobileSearchBar = document.querySelector(".mobile-search-bar");
   const closeSearch = document.getElementById("closeSearch");
   const body = document.body;
+
+  // Check for saved sidebar state immediately
+  const savedSidebarState = localStorage.getItem("sidebar-collapsed");
+  if (savedSidebarState === "true") {
+    body.classList.add("sidebar-collapsed");
+  }
 
   // Toggle sidebar on mobile
   if (sidebarToggle) {
     sidebarToggle.addEventListener("click", () => {
       sidebar.classList.toggle("show");
-      sidebarOverlay.classList.toggle("show");
+      if (sidebarOverlay) {
+        sidebarOverlay.classList.toggle("show");
+      }
       body.style.overflow = sidebar.classList.contains("show") ? "hidden" : "";
+    });
+  }
+
+  // Toggle sidebar on desktop
+  if (sidebarToggleLg) {
+    sidebarToggleLg.addEventListener("click", () => {
+      toggleSidebarCollapsed();
     });
   }
 
@@ -25,7 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (sidebarClose) {
     sidebarClose.addEventListener("click", () => {
       sidebar.classList.remove("show");
-      sidebarOverlay.classList.remove("show");
+      if (sidebarOverlay) {
+        sidebarOverlay.classList.remove("show");
+      }
       body.style.overflow = "";
     });
   }
@@ -40,77 +58,40 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Toggle mobile search bar
-  if (searchToggle) {
+  if (searchToggle && mobileSearchBar) {
     searchToggle.addEventListener("click", () => {
       mobileSearchBar.classList.add("show");
     });
   }
 
   // Close mobile search bar
-  if (closeSearch) {
+  if (closeSearch && mobileSearchBar) {
     closeSearch.addEventListener("click", () => {
       mobileSearchBar.classList.remove("show");
     });
   }
 
-  // Toggle sidebar collapsed state on desktop
+  // Toggle sidebar collapsed state
   const toggleSidebarCollapsed = () => {
     body.classList.toggle("sidebar-collapsed");
 
     // Save preference in localStorage
-    if (body.classList.contains("sidebar-collapsed")) {
-      localStorage.setItem("sidebar-collapsed", "true");
-    } else {
-      localStorage.setItem("sidebar-collapsed", "false");
-    }
+    localStorage.setItem(
+      "sidebar-collapsed",
+      body.classList.contains("sidebar-collapsed") ? "true" : "false"
+    );
   };
-
-  // Desktop sidebar toggle
-  if (sidebarToggle) {
-    sidebarToggle.addEventListener("click", (e) => {
-      if (window.innerWidth >= 992) {
-        e.preventDefault();
-        toggleSidebarCollapsed();
-      }
-    });
-  }
-
-  // Check for saved sidebar state
-  const savedSidebarState = localStorage.getItem("sidebar-collapsed");
-  if (savedSidebarState === "true") {
-    body.classList.add("sidebar-collapsed");
-  }
-
-  // Add tooltip titles to menu items for collapsed sidebar
-  const menuLinks = document.querySelectorAll(".sidebar-menu-link");
-  menuLinks.forEach((link) => {
-    const title = link.querySelector("span")?.textContent;
-    if (title) {
-      link.setAttribute("data-title", title);
-    }
-  });
 
   // Handle window resize
   window.addEventListener("resize", () => {
-    if (window.innerWidth < 992) {
+    if (window.innerWidth < 992 && sidebar) {
       sidebar.classList.remove("show");
-      sidebarOverlay.classList.remove("show");
+      if (sidebarOverlay) {
+        sidebarOverlay.classList.remove("show");
+      }
       body.style.overflow = "";
     }
   });
-
-  // Initialize Bootstrap tooltips
-  if (
-    typeof bootstrap !== "undefined" &&
-    typeof bootstrap.Tooltip === "function"
-  ) {
-    const tooltipTriggerList = [].slice.call(
-      document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    );
-    tooltipTriggerList.map(
-      (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
-    );
-  }
 
   // Add active class to parent menu item if submenu item is active
   const activeSubmenuItem = document.querySelector(

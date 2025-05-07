@@ -3,8 +3,32 @@
  * Funcionalidades para listar, crear, editar, ver detalles y eliminar equipos
  */
 
-// Declaración de variables globales (asumiendo que jQuery está disponible globalmente)
+// Declaración de variables globales
 const $ = jQuery;
+const bootstrap = window.bootstrap; // Asegúrate de que Bootstrap esté disponible globalmente
+// Verificar si las variables ya están definidas en el objeto window
+// Si no están definidas, no intentamos redeclararlas
+// Esto evita tanto el error de "no disponible" como el de "ya declarado"
+if (!window.showErrorToast)
+  window.showErrorToast = (msg) => {
+    console.error(msg);
+  };
+if (!window.showSuccessToast)
+  window.showSuccessToast = (msg) => {
+    console.log(msg);
+  };
+if (!window.imageViewer)
+  window.imageViewer = {
+    show: () => {
+      console.log("Visor de imágenes no disponible");
+    },
+  };
+if (!window.ImageUpload)
+  window.ImageUpload = () => {
+    console.log("Componente de carga de imágenes no disponible");
+  };
+if (!window.showLoading) window.showLoading = () => {};
+if (!window.hideLoading) window.hideLoading = () => {};
 
 document.addEventListener("DOMContentLoaded", () => {
   // Variables globales
@@ -12,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let equipoActual = null;
   let filtrosActivos = {};
   let imageUploader = null;
+  let equipoSeleccionado = null;
 
   // Función para obtener la URL base
   function getBaseUrl() {
@@ -21,6 +46,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Función para construir URL completa
   function getUrl(path) {
     return getBaseUrl() + path;
+  }
+
+  // Función para obtener la unidad según el tipo de orómetro
+  function getUnidadOrometro(tipoOrometro) {
+    return tipoOrometro && tipoOrometro.toLowerCase() === "kilometros"
+      ? "km"
+      : "hrs";
   }
 
   // Inicializar DataTable
@@ -33,6 +65,11 @@ document.addEventListener("DOMContentLoaded", () => {
         url: getUrl("api/equipos/equipos/listar.php"),
         type: "POST",
         data: (d) => {
+          // Si se selecciona "Todos", usar un valor grande pero finito en lugar de -1
+          if (d.length == -1) {
+            d.length = 10000; // Un número grande pero manejable
+          }
+
           // Agregar filtros activos
           return {
             ...d,
@@ -45,7 +82,11 @@ document.addEventListener("DOMContentLoaded", () => {
             error,
             thrown
           );
-          showErrorToast("Error al cargar los datos de la tabla: " + thrown);
+          if (window.showErrorToast) {
+            window.showErrorToast(
+              "Error al cargar los datos de la tabla: " + thrown
+            );
+          }
         },
       },
       columns: [
@@ -59,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
               : getUrl("assets/img/equipos/equipos/default.png");
             return `<img src="${imgUrl}" class="equipo-imagen-tabla" alt="${
               row.nombre || "Equipo"
-            }" style="cursor: pointer;" data-image-viewer>`;
+            }" data-image-viewer="true">`;
           },
         },
         {
@@ -71,39 +112,108 @@ document.addEventListener("DOMContentLoaded", () => {
           className: "align-middle",
         },
         {
-          data: "tipo_equipo",
-          className: "align-middle",
-          render: (data) => capitalizarPrimeraLetra(data),
-        },
-        {
-          data: null,
-          className: "align-middle",
-          render: (data) => {
-            let marcaModelo = "";
-            if (data.marca) marcaModelo += data.marca;
-            if (data.marca && data.modelo) marcaModelo += " / ";
-            if (data.modelo) marcaModelo += data.modelo;
-            return marcaModelo || "-";
-          },
-        },
-        {
           data: "estado",
           className: "align-middle text-center",
-          render: (data) => {
-            const claseEstado = obtenerClaseEstado(data);
-            return `<span class="badge rounded-pill ${claseEstado}">${capitalizarPrimeraLetra(
+          render: (data, type) => {
+            // Para ordenamiento, devolver el valor sin formato
+            if (type === "sort" || type === "type") {
+              return data;
+            }
+            return `<span class="estado-badge estado-${data.toLowerCase()}">${capitalizarPrimeraLetra(
               data
             )}</span>`;
           },
         },
         {
-          data: "orometro_actual",
-          className: "align-middle text-end",
-          render: (data) => formatearNumero(data) + " hrs",
+          data: "anterior_orometro",
+          className: "align-middle text-center",
+          render: (data, type, row) => {
+            // Para ordenamiento, devolver el valor numérico
+            if (type === "sort" || type === "type") {
+              return Number.parseFloat(data || 0);
+            }
+            const unidad = getUnidadOrometro(row.tipo_orometro);
+            return `<span class="orometro-valor">${formatearNumero(
+              data || 0
+            )} ${unidad}</span>`;
+          },
         },
         {
-          data: "ubicacion",
-          className: "align-middle",
+          data: "orometro_actual",
+          className: "align-middle text-center",
+          render: (data, type, row) => {
+            // Para ordenamiento, devolver el valor numérico
+            if (type === "sort" || type === "type") {
+              return Number.parseFloat(data);
+            }
+
+            // Calcular el progreso para la barra
+            const anterior = Number.parseFloat(row.anterior_orometro || 0);
+            const actual = Number.parseFloat(data);
+            const proximo = Number.parseFloat(row.proximo_orometro || 0);
+            const notificacion = Number.parseFloat(row.notificacion || 0);
+            const unidad = getUnidadOrometro(row.tipo_orometro);
+
+            let porcentaje = 0;
+            let colorClass = "bg-success";
+            let textColorClass = "text-success";
+
+            if (proximo > anterior) {
+              // Calcular el porcentaje de avance
+              const total = proximo - anterior;
+              const avance = actual - anterior;
+              porcentaje = Math.min(Math.max((avance / total) * 100, 0), 100);
+
+              // Determinar el color según la proximidad al próximo mantenimiento
+              const restante = proximo - actual;
+
+              if (notificacion > 0) {
+                if (restante <= notificacion / 2) {
+                  colorClass = "bg-danger";
+                  textColorClass = "text-danger";
+                } else if (restante <= notificacion) {
+                  colorClass = "bg-warning";
+                  textColorClass = "text-warning";
+                }
+              }
+            }
+
+            // Construir la barra de progreso
+            const progressBar = `
+              <div class="progress mt-1" style="height: 4px;">
+                <div class="progress-bar ${colorClass}" role="progressbar" 
+                     style="width: ${porcentaje}%" 
+                     aria-valuenow="${porcentaje}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100"></div>
+              </div>
+            `;
+
+            return `
+              <div>
+                <span class="orometro-valor ${textColorClass} fw-bold">${formatearNumero(
+              data
+            )} ${unidad}</span>
+                ${progressBar}
+              </div>
+            `;
+          },
+        },
+        {
+          data: "proximo_orometro",
+          className: "align-middle text-center",
+          render: (data, type, row) => {
+            // Para ordenamiento, devolver el valor numérico
+            if (type === "sort" || type === "type") {
+              return Number.parseFloat(data || 0);
+            }
+            const unidad = getUnidadOrometro(row.tipo_orometro);
+            return data
+              ? `<span class="orometro-valor text-danger fw-bold">${formatearNumero(
+                  data
+                )} ${unidad}</span>`
+              : "-";
+          },
         },
         {
           data: null,
@@ -111,14 +221,14 @@ document.addEventListener("DOMContentLoaded", () => {
           className: "text-center align-middle",
           render: (data) => {
             let acciones = '<div class="btn-group btn-group-sm">';
-            acciones += `<button type="button" class="btn btn-info btn-accion btn-ver-equipo" data-id="${data.id}" title="Ver detalles"><i class="bi bi-eye"></i></button>`;
+            acciones += `<button type="button" class="btn-accion btn-ver-equipo" data-id="${data.id}" title="Ver detalles"><i class="bi bi-eye"></i></button>`;
 
             if (tienePermiso("equipos.editar")) {
-              acciones += `<button type="button" class="btn btn-primary btn-accion btn-editar-equipo" data-id="${data.id}" title="Editar"><i class="bi bi-pencil"></i></button>`;
+              acciones += `<button type="button" class="btn-accion btn-editar-equipo" data-id="${data.id}" title="Editar"><i class="bi bi-pencil"></i></button>`;
             }
 
             if (tienePermiso("equipos.eliminar")) {
-              acciones += `<button type="button" class="btn btn-danger btn-accion btn-eliminar-equipo" data-id="${data.id}" title="Eliminar"><i class="bi bi-trash"></i></button>`;
+              acciones += `<button type="button" class="btn-accion btn-eliminar-equipo" data-id="${data.id}" title="Eliminar"><i class="bi bi-trash"></i></button>`;
             }
 
             acciones += "</div>";
@@ -126,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
           },
         },
       ],
-      order: [[0, "desc"]],
+      order: [[1, "asc"]],
       language: {
         url: getUrl("assets/plugins/datatables/js/es-ES.json"),
         loadingRecords: "Cargando...",
@@ -134,46 +244,38 @@ document.addEventListener("DOMContentLoaded", () => {
         zeroRecords: "No se encontraron registros",
         emptyTable: "No hay datos disponibles en la tabla",
       },
-      dom: '<"row mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row mt-3"<"col-md-6"l><"col-md-6"p>>',
+      dom: '<"row"<"col-md-6"B><"col-md-6"f>>rt<"row"<"col-md-6"l><"col-md-6"p>>',
       buttons: [
         {
           extend: "copy",
           text: '<i class="bi bi-clipboard"></i> Copiar',
-          className: "btn btn-sm btn-outline-secondary",
+          className: "btn btn-sm",
           exportOptions: {
-            columns: ":not(:last-child)", // No exportar la columna de acciones
+            columns: [1, 2, 3, 4],
           },
         },
         {
           extend: "excel",
           text: '<i class="bi bi-file-earmark-excel"></i> Excel',
-          className: "btn btn-sm btn-outline-success",
+          className: "btn btn-sm",
           exportOptions: {
-            columns: ":not(:last-child)",
-          },
-        },
-        {
-          extend: "csv",
-          text: '<i class="bi bi-filetype-csv"></i> CSV',
-          className: "btn btn-sm btn-outline-info",
-          exportOptions: {
-            columns: ":not(:last-child)",
+            columns: [1, 2, 3, 4],
           },
         },
         {
           extend: "pdf",
           text: '<i class="bi bi-file-earmark-pdf"></i> PDF',
-          className: "btn btn-sm btn-outline-danger",
+          className: "btn btn-sm",
           exportOptions: {
-            columns: ":not(:last-child)",
+            columns: [1, 2, 3, 4],
           },
         },
         {
           extend: "print",
           text: '<i class="bi bi-printer"></i> Imprimir',
-          className: "btn btn-sm btn-outline-primary",
+          className: "btn btn-sm",
           exportOptions: {
-            columns: ":not(:last-child)",
+            columns: [1, 2, 3, 4],
           },
         },
       ],
@@ -181,38 +283,330 @@ document.addEventListener("DOMContentLoaded", () => {
         [10, 25, 50, 100, -1],
         [10, 25, 50, 100, "Todos"],
       ],
-      pageLength: 10,
-      /*initComplete: function () {
-        console.log("DataTable inicializado completamente");
-        this.api()
-          .buttons()
-          .container()
-          .appendTo("#equipos-table_wrapper .col-md-6:eq(0)");
+      pageLength: 25,
+      initComplete: () => {
+        // Evento para seleccionar fila
+        $("#equipos-table tbody").on("click", "tr", function () {
+          const data = equiposTable.row(this).data();
+          if (data) {
+            // Mostrar toast de carga
+            // if (window.showInfoToast) {
+            //   window.showInfoToast("Cargando detalles del equipo...");
+            // }
 
-        // Delegar eventos de imágenes para ImageViewer
-        $("#equipos-table").on("click", "[data-image-viewer]", function () {
-          const src = $(this).attr("src");
-          const caption = $(this).attr("alt");
-          if (typeof imageViewer !== "undefined") {
-            imageViewer.show(src, caption);
-          } else {
-            showErrorToast("El visor de imágenes no está disponible");
+            // Remover selección anterior
+            $("#equipos-table tbody tr").removeClass("selected");
+            // Agregar selección a la fila actual
+            $(this).addClass("selected");
+
+            // Añadir animación al panel de detalles
+            $("#equipo-detalle").removeClass("loaded").addClass("loading");
+
+            // Cargar detalles en el panel lateral con un pequeño retraso para la animación
+            setTimeout(() => {
+              cargarDetallesEquipo(data.id);
+              // Quitar clase de carga y añadir clase de cargado para la animación
+              $("#equipo-detalle").removeClass("loading").addClass("loaded");
+            }, 300);
           }
         });
-      },*/
-      initComplete: function () {
-        console.log("DataTable inicializado completamente");
+      },
+      // Manejar el error de "Todos" registros
+      drawCallback: () => {
+        if (window.hideLoading) {
+          window.hideLoading();
+        }
+      },
+      preDrawCallback: () => {
+        if (window.showLoading) {
+          window.showLoading();
+        }
+      },
+    });
+  }
 
-        // Delegar eventos de imágenes para ImageViewer
-        $("#equipos-table").on("click", "[data-image-viewer]", function () {
-          const src = $(this).attr("src");
-          const caption = $(this).attr("alt");
-          if (typeof imageViewer !== "undefined") {
-            imageViewer.show(src, caption);
-          } else {
-            showErrorToast("El visor de imágenes no está disponible");
+  // Función para cargar detalles del equipo en el panel lateral
+  function cargarDetallesEquipo(id) {
+    // Mostrar indicador de carga
+    $("#equipo-detalle .detail-content").html(
+      '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Cargando detalles...</p></div>'
+    );
+    $("#equipo-detalle").addClass("active");
+
+    // Obtener datos del equipo
+    $.ajax({
+      url: getUrl("api/equipos/equipos/obtener.php"),
+      type: "GET",
+      data: { id: id },
+      dataType: "json",
+      success: (response) => {
+        if (response.success && response.data) {
+          const equipo = response.data;
+          equipoSeleccionado = equipo;
+          const unidad = getUnidadOrometro(equipo.tipo_orometro);
+
+          // Actualizar título del panel y añadir imagen en el encabezado
+          const imagenUrl =
+            equipo.imagen || getUrl("assets/img/equipos/equipos/default.png");
+
+          // Actualizar el encabezado con la imagen
+          $("#equipo-detalle .detail-header").html(`
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h2 class="detail-title">${equipo.nombre}</h2>
+              <p class="detail-subtitle">Código: ${equipo.codigo}</p>
+            </div>
+            <div class="detail-header-image">
+              <img src="${imagenUrl}" alt="${equipo.nombre}" class="detail-header-img" data-image-viewer="true">
+            </div>
+          </div>
+        `);
+
+          // Calcular tiempo restante para mantenimiento
+          let tiempoRestante = "";
+          let tiempoRestanteValor = 0;
+          let porcentajeAvance = 0;
+          let colorClase = "success";
+
+          if (equipo.proximo_orometro && equipo.orometro_actual) {
+            const restante =
+              Number.parseFloat(equipo.proximo_orometro) -
+              Number.parseFloat(equipo.orometro_actual);
+            tiempoRestanteValor = restante;
+
+            // Calcular porcentaje de avance
+            const anterior = Number.parseFloat(equipo.anterior_orometro || 0);
+            const total = Number.parseFloat(equipo.proximo_orometro) - anterior;
+            const avance = Number.parseFloat(equipo.orometro_actual) - anterior;
+            porcentajeAvance = Math.min(
+              Math.max((avance / total) * 100, 0),
+              100
+            );
+
+            // Determinar color según proximidad
+            if (equipo.notificacion) {
+              const notificacion = Number.parseFloat(equipo.notificacion);
+              if (restante <= notificacion / 2) {
+                colorClase = "danger";
+              } else if (restante <= notificacion) {
+                colorClase = "warning";
+              }
+            }
+
+            if (restante > 0) {
+              tiempoRestante = `
+              <div class="tiempo-restante-container text-center mb-4">
+                <h3 class="tiempo-restante-titulo">Tiempo para próximo mantenimiento</h3>
+                <div class="tiempo-restante-valor text-${colorClase}">${formatearNumero(
+                restante
+              )} ${unidad}</div>
+                <div class="progress mt-2" style="height: 8px;">
+                  <div class="progress-bar bg-${colorClase}" role="progressbar" 
+                       style="width: ${porcentajeAvance}%" 
+                       aria-valuenow="${porcentajeAvance}" 
+                       aria-valuemin="0" 
+                       aria-valuemax="100"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-1">
+                  <small>${formatearNumero(anterior)} ${unidad}</small>
+                  <small>${formatearNumero(
+                    equipo.proximo_orometro
+                  )} ${unidad}</small>
+                </div>
+              </div>
+            `;
+            } else {
+              tiempoRestante = `
+              <div class="tiempo-restante-container text-center mb-4">
+                <h3 class="tiempo-restante-titulo">¡Mantenimiento requerido!</h3>
+                <div class="tiempo-restante-valor text-danger">Excedido por ${formatearNumero(
+                  Math.abs(restante)
+                )} ${unidad}</div>
+                <div class="progress mt-2" style="height: 8px;">
+                  <div class="progress-bar bg-danger" role="progressbar" 
+                       style="width: 100%" 
+                       aria-valuenow="100" 
+                       aria-valuemin="0" 
+                       aria-valuemax="100"></div>
+                </div>
+              </div>
+            `;
+            }
           }
-        });
+
+          // Procesar componentes que ya vienen en la respuesta
+          let componentesHtml = "";
+
+          // 2. Sección de resumen de componentes
+          let totalComponentes = 0;
+          let componentesActivos = 0;
+          let componentesMantenimiento = 0;
+          let componentesAveriados = 0;
+          let componentesOtros = 0;
+
+          if (response.componentes && response.componentes.length > 0) {
+            const componentes = response.componentes;
+            totalComponentes = componentes.length;
+
+            // Contar componentes por estado
+            componentes.forEach((comp) => {
+              if (comp.estado.toLowerCase() === "activo") componentesActivos++;
+              else if (comp.estado.toLowerCase() === "mantenimiento")
+                componentesMantenimiento++;
+              else if (comp.estado.toLowerCase() === "averiado")
+                componentesAveriados++;
+              else componentesOtros++;
+            });
+
+            // Generar HTML de resumen de componentes
+            componentesHtml += `
+            <div class="componentes-resumen-container mb-4">
+              <h3 class="componentes-titulo">Resumen de Componentes</h3>
+              <div class="row text-center">
+                <div class="col">
+                  <div class="componente-contador total">${totalComponentes}</div>
+                  <div class="componente-etiqueta">Total</div>
+                </div>
+                <div class="col">
+                  <div class="componente-contador activos">${componentesActivos}</div>
+                  <div class="componente-etiqueta">Activos</div>
+                </div>
+                <div class="col">
+                  <div class="componente-contador mantenimiento">${componentesMantenimiento}</div>
+                  <div class="componente-etiqueta">Mantenimiento</div>
+                </div>
+                <div class="col">
+                  <div class="componente-contador averiados">${componentesAveriados}</div>
+                  <div class="componente-etiqueta">Averiados</div>
+                </div>
+              </div>
+            </div>
+          `;
+
+            // 3. Lista de componentes con tiempo restante
+            componentesHtml += `
+            <div class="componentes-lista-container">
+              <h3 class="componentes-titulo">Estado de Mantenimiento de Componentes</h3>
+              <div class="componentes-lista">
+          `;
+
+            // Generar lista de componentes
+            componentes.forEach((comp) => {
+              const compUnidad = getUnidadOrometro(comp.tipo_orometro);
+              let compColorClase = "success";
+              let compPorcentaje = 0;
+              let compRestante = 0;
+
+              // Calcular tiempo restante y porcentaje para cada componente
+              if (comp.proximo_orometro && comp.orometro_actual) {
+                const anterior = Number.parseFloat(comp.anterior_orometro || 0);
+                const actual = Number.parseFloat(comp.orometro_actual);
+                const proximo = Number.parseFloat(comp.proximo_orometro);
+                compRestante = proximo - actual;
+
+                // Calcular porcentaje
+                if (proximo > anterior) {
+                  const total = proximo - anterior;
+                  const avance = actual - anterior;
+                  compPorcentaje = Math.min(
+                    Math.max((avance / total) * 100, 0),
+                    100
+                  );
+                }
+
+                // Determinar color
+                if (comp.notificacion) {
+                  const notificacion = Number.parseFloat(comp.notificacion);
+                  if (compRestante <= notificacion / 2) {
+                    compColorClase = "danger";
+                  } else if (compRestante <= notificacion) {
+                    compColorClase = "warning";
+                  }
+                }
+              }
+
+              // Generar HTML para cada componente
+              componentesHtml += `
+              <div class="componente-item mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <strong>${comp.codigo}</strong> - ${comp.nombre}
+                  </div>
+                  <div class="text-${compColorClase}">
+                    ${
+                      compRestante > 0
+                        ? formatearNumero(compRestante) + " " + compUnidad
+                        : "Mantenimiento requerido"
+                    }
+                  </div>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-${compColorClase}" role="progressbar" 
+                       style="width: ${compPorcentaje}%" 
+                       aria-valuenow="${compPorcentaje}" 
+                       aria-valuemin="0" 
+                       aria-valuemax="100"></div>
+                </div>
+              </div>
+            `;
+            });
+
+            componentesHtml += `
+              </div>
+            </div>
+          `;
+          } else {
+            // No hay componentes
+            componentesHtml += `
+            <div class="componentes-resumen-container mb-4">
+              <h3 class="componentes-titulo">Resumen de Componentes</h3>
+              <div class="text-center py-3">
+                <div class="componente-contador total">0</div>
+                <div class="componente-etiqueta">No hay componentes asociados</div>
+              </div>
+            </div>
+          `;
+          }
+
+          // Actualizar contenido del panel
+          $("#equipo-detalle .detail-content").html(`
+          ${tiempoRestante}
+          ${componentesHtml}
+        `);
+
+          // Inicializar el visor de imágenes para la imagen del encabezado
+          $(".detail-header-img").on("click", function () {
+            if (window.imageViewer) {
+              window.imageViewer.show($(this).attr("src"), "Imagen del equipo");
+            }
+          });
+        } else {
+          // Mostrar mensaje de error
+          $("#equipo-detalle .detail-content").html(`
+          <div class="detail-empty">
+            <div class="detail-empty-icon">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="detail-empty-text">
+              Error al cargar los detalles del equipo
+            </div>
+          </div>
+        `);
+        }
+      },
+      error: (xhr, status, error) => {
+        // Mostrar mensaje de error
+        $("#equipo-detalle .detail-content").html(`
+        <div class="detail-empty">
+          <div class="detail-empty-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+          <div class="detail-empty-text">
+            Error de conexión al servidor
+          </div>
+        </div>
+      `);
+        console.error("Error al obtener detalles del equipo:", error);
       },
     });
   }
@@ -241,6 +635,26 @@ document.addEventListener("DOMContentLoaded", () => {
       descanso: "bg-info",
     };
     return clases[estado.toLowerCase()] || "bg-secondary";
+  }
+
+  // Función para calcular el próximo orómetro
+  function calcularProximoOrometro() {
+    const anteriorOrometro =
+      parseFloat($("#equipo-anterior-orometro").val()) || 0;
+    const mantenimiento = parseFloat($("#equipo-mantenimiento").val()) || 0;
+    const proximoOrometro = anteriorOrometro + mantenimiento;
+
+    // Actualizar el campo de próximo orómetro
+    $("#equipo-proximo-orometro").val(proximoOrometro.toFixed(2));
+  }
+
+  // Función para actualizar las etiquetas de unidad según el tipo de orómetro
+  function actualizarEtiquetasUnidad() {
+    const tipoOrometro = $("#equipo-tipo-orometro").val();
+    const unidad = getUnidadOrometro(tipoOrometro);
+
+    // Actualizar todas las etiquetas de unidad
+    $(".unidad-orometro").text(unidad);
   }
 
   // Inicializar validación del formulario
@@ -349,20 +763,32 @@ document.addEventListener("DOMContentLoaded", () => {
     // Verificar si el contenedor existe
     if (document.getElementById("container-equipo-imagen")) {
       // Inicializar el componente
-      imageUploader = new ImageUpload("container-equipo-imagen", {
-        maxSize: 2 * 1024 * 1024, // 5MB
-        acceptedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
-        inputName: "imagen",
-        defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
-        existingImage: "",
-        uploadPath: "assets/img/equipos/equipos/",
-        position: "center", // Posicionar la cámara en el centro
-      });
+      try {
+        imageUploader = new ImageUpload("container-equipo-imagen", {
+          maxSize: 2 * 1024 * 1024, // 2MB
+          acceptedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+          inputName: "imagen",
+          defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
+          existingImage: "",
+          uploadPath: "assets/img/equipos/equipos/",
+          position: "center", // Posicionar la cámara en el centro
+        });
+      } catch (e) {
+        console.warn(
+          "Error al inicializar el componente de carga de imágenes:",
+          e
+        );
+      }
     }
   }
 
   // Abrir modal para crear nuevo equipo
   function abrirModalCrear() {
+    // Mostrar toast de información
+    if (window.showInfoToast) {
+      window.showInfoToast("Preparando formulario para nuevo equipo...");
+    }
+
     // Limpiar formulario
     $("#form-equipo")[0].reset();
     $("#equipo-id").val("");
@@ -372,16 +798,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Inicializar componente de carga de imágenes con valores por defecto
     if (imageUploader) {
-      // Reiniciar el componente con valores por defecto
-      imageUploader = new ImageUpload("container-equipo-imagen", {
-        maxSize: 2 * 1024 * 1024,
-        acceptedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
-        inputName: "imagen",
-        defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
-        existingImage: "",
-        uploadPath: "assets/img/equipos/equipos/",
-        position: "center", // Posicionar la cámara en el centro
-      });
+      try {
+        // Reiniciar el componente con valores por defecto
+        imageUploader = new ImageUpload("container-equipo-imagen", {
+          maxSize: 2 * 1024 * 1024,
+          acceptedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+          inputName: "imagen",
+          defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
+          existingImage: "",
+          uploadPath: "assets/img/equipos/equipos/",
+          position: "center", // Posicionar la cámara en el centro
+        });
+      } catch (e) {
+        console.warn(
+          "Error al reiniciar el componente de carga de imágenes:",
+          e
+        );
+      }
     } else {
       // Inicializar si no existe
       initImageUploader();
@@ -399,12 +832,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Resetear equipo actual
     equipoActual = null;
+
+    // Configurar el campo de próximo orómetro como solo lectura
+    $("#equipo-proximo-orometro").prop("readonly", true);
+
+    // Actualizar etiquetas de unidad
+    actualizarEtiquetasUnidad();
+
+    // Calcular próximo orómetro inicial
+    calcularProximoOrometro();
   }
 
   // Abrir modal para editar equipo
   function abrirModalEditar(id) {
     // Mostrar indicador de carga
     showLoadingOverlay();
+
+    // Mostrar toast de información
+    if (window.showInfoToast) {
+      window.showInfoToast("Cargando información del equipo para editar...");
+    }
 
     // Obtener datos del equipo
     $.ajax({
@@ -434,35 +881,25 @@ document.addEventListener("DOMContentLoaded", () => {
           $("#equipo-linea").val(equipo.linea_electrica);
           $("#equipo-ubicacion").val(equipo.ubicacion);
           $("#equipo-estado").val(equipo.estado);
+          $("#equipo-tipo-orometro").val(equipo.tipo_orometro);
+          $("#equipo-anterior-orometro").val(equipo.anterior_orometro);
           $("#equipo-orometro").val(equipo.orometro_actual);
+          $("#equipo-proximo-orometro").val(equipo.proximo_orometro);
           $("#equipo-limite").val(equipo.limite);
           $("#equipo-notificacion").val(equipo.notificacion);
           $("#equipo-mantenimiento").val(equipo.mantenimiento);
           $("#equipo-observaciones").val(equipo.observaciones);
 
+          // Configurar el campo de próximo orómetro como solo lectura
+          $("#equipo-proximo-orometro").prop("readonly", true);
+
+          // Actualizar etiquetas de unidad
+          actualizarEtiquetasUnidad();
+
           // Inicializar componente de carga de imágenes con la imagen existente
           if (imageUploader) {
-            // Reiniciar el componente con la imagen existente
-            imageUploader = new ImageUpload("container-equipo-imagen", {
-              maxSize: 2 * 1024 * 1024,
-              acceptedTypes: [
-                "image/jpeg",
-                "image/png",
-                "image/gif",
-                "image/webp",
-              ],
-              inputName: "imagen",
-              defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
-              existingImage: equipo.imagen || "",
-              uploadPath: "assets/img/equipos/equipos/",
-              position: "center", // Posicionar la cámara en el centro
-            });
-          } else {
-            // Inicializar si no existe
-            initImageUploader();
-
-            // Actualizar con la imagen existente
-            if (imageUploader && equipo.imagen) {
+            try {
+              // Reiniciar el componente con la imagen existente
               imageUploader = new ImageUpload("container-equipo-imagen", {
                 maxSize: 2 * 1024 * 1024,
                 acceptedTypes: [
@@ -473,11 +910,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 ],
                 inputName: "imagen",
                 defaultImage: getUrl("assets/img/equipos/equipos/default.png"),
-                existingImage: equipo.imagen,
+                existingImage: equipo.imagen || "",
                 uploadPath: "assets/img/equipos/equipos/",
                 position: "center", // Posicionar la cámara en el centro
               });
+            } catch (e) {
+              console.warn(
+                "Error al reiniciar el componente de carga de imágenes:",
+                e
+              );
             }
+          } else {
+            // Inicializar si no existe
+            initImageUploader();
           }
 
           // Actualizar título del modal
@@ -493,21 +938,24 @@ document.addEventListener("DOMContentLoaded", () => {
           $("#form-equipo").validate().resetForm();
           $("#form-equipo .is-invalid").removeClass("is-invalid");
         } else {
-          showErrorToast(
-            response.message || "Error al obtener los datos del equipo"
-          );
+          if (window.showErrorToast) {
+            window.showErrorToast(
+              response.message || "Error al obtener los datos del equipo"
+            );
+          }
         }
       },
       error: (xhr, status, error) => {
         // Ocultar indicador de carga
         hideLoadingOverlay();
-        showErrorToast("Error de conexión al servidor");
+        if (window.showErrorToast) {
+          window.showErrorToast("Error de conexión al servidor");
+        }
         console.error("Error al obtener equipo:", error);
       },
     });
   }
 
-  // Guardar equipo (crear o actualizar)
   // Guardar equipo (crear o actualizar)
   function guardarEquipo() {
     // Validar formulario
@@ -517,9 +965,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Mostrar indicador de carga
     showLoadingOverlay();
+    if (window.showInfoToast) {
+      window.showInfoToast("Guardando información del equipo...");
+    }
 
     // Preparar datos del formulario
     const formData = new FormData(document.getElementById("form-equipo"));
+
+    // Calcular y establecer el próximo orómetro
+    const anteriorOrometro =
+      parseFloat($("#equipo-anterior-orometro").val()) || 0;
+    const mantenimiento = parseFloat($("#equipo-mantenimiento").val()) || 0;
+    const proximoOrometro = anteriorOrometro + mantenimiento;
+
+    // Actualizar el campo de próximo orómetro en el formulario
+    $("#equipo-proximo-orometro").val(proximoOrometro.toFixed(2));
+    formData.set("proximo_orometro", proximoOrometro.toFixed(2));
+
+    // Verificar si la imagen es default.png y está siendo reemplazada
+    const imagenInput = document.getElementById("input-equipo-imagen");
+    const existingImageElement = document.getElementById(
+      "existing-equipo-imagen"
+    );
+    const existingImage = existingImageElement
+      ? existingImageElement.value
+      : "";
+
+    if (
+      imagenInput &&
+      imagenInput.files.length > 0 &&
+      existingImage.includes("default.png")
+    ) {
+      // Si es la imagen por defecto, no enviar el campo de imagen existente
+      formData.delete("imagen_existing");
+    }
 
     // Enviar solicitud
     $.ajax({
@@ -541,12 +1020,35 @@ document.addEventListener("DOMContentLoaded", () => {
           modalEquipo.hide();
 
           // Mostrar mensaje de éxito
-          showSuccessToast(response.message);
+          if (window.showSuccessToast) {
+            window.showSuccessToast(response.message);
+          }
 
           // Recargar tabla
-          equiposTable.ajax.reload();
+          equiposTable.ajax.reload(null, false);
+
+          // Si hay un equipo seleccionado, actualizar sus detalles
+          if (equipoSeleccionado && equipoSeleccionado.id == response.id) {
+            // Añadir animación al panel de detalles
+            $("#equipo-detalle").removeClass("loaded").addClass("loading");
+
+            if (window.showInfoToast) {
+              window.showInfoToast("Actualizando detalles del equipo...");
+            }
+
+            // Cargar detalles con un pequeño retraso para la animación
+            setTimeout(() => {
+              cargarDetallesEquipo(response.id);
+              // Quitar clase de carga y añadir clase de cargado para la animación
+              $("#equipo-detalle").removeClass("loading").addClass("loaded");
+            }, 300);
+          }
         } else {
-          showErrorToast(response.message || "Error al guardar el equipo");
+          if (window.showErrorToast) {
+            window.showErrorToast(
+              response.message || "Error al guardar el equipo"
+            );
+          }
         }
       },
       error: (xhr, status, error) => {
@@ -562,18 +1064,26 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (e) {
           console.error("Error al parsear respuesta:", e);
+          console.log("Respuesta del servidor:", xhr.responseText);
         }
 
-        showErrorToast(errorMessage);
+        if (window.showErrorToast) {
+          window.showErrorToast(errorMessage);
+        }
         console.error("Error al guardar equipo:", error);
       },
     });
   }
 
-  // Ver detalles del equipo
+  // Modificación para la función verDetalleEquipo en equipos.js
   function verDetalleEquipo(id) {
     // Mostrar indicador de carga
     showLoadingOverlay();
+
+    // Mostrar toast de información
+    if (window.showInfoToast) {
+      window.showInfoToast("Cargando detalles del equipo...");
+    }
 
     // Obtener datos del equipo
     $.ajax({
@@ -588,6 +1098,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (response.success && response.data) {
           const equipo = response.data;
           equipoActual = equipo;
+          const unidad = getUnidadOrometro(equipo.tipo_orometro);
 
           // Actualizar datos en el modal
           $("#detalle-nombre").text(equipo.nombre);
@@ -596,6 +1107,9 @@ document.addEventListener("DOMContentLoaded", () => {
           $("#detalle-tipo").text(
             capitalizarPrimeraLetra(equipo.tipo_equipo) || "-"
           );
+          $("#detalle-tipo-orometro").text(
+            capitalizarPrimeraLetra(equipo.tipo_orometro) || "-"
+          );
           $("#detalle-marca").text(equipo.marca || "-");
           $("#detalle-modelo").text(equipo.modelo || "-");
           $("#detalle-serie").text(equipo.numero_serie || "-");
@@ -603,27 +1117,71 @@ document.addEventListener("DOMContentLoaded", () => {
           $("#detalle-fase").text(equipo.fase || "-");
           $("#detalle-linea").text(equipo.linea_electrica || "-");
           $("#detalle-ubicacion").text(equipo.ubicacion || "-");
+
+          // Actualizar información de orómetros
+          $("#detalle-orometro-anterior").text(
+            formatearNumero(equipo.anterior_orometro || 0) + " " + unidad
+          );
           $("#detalle-orometro").text(
             equipo.orometro_actual
-              ? formatearNumero(equipo.orometro_actual) + " hrs"
-              : "0.00 hrs"
+              ? formatearNumero(equipo.orometro_actual) + " " + unidad
+              : "0.00 " + unidad
           );
           $("#detalle-proximo-orometro").text(
             equipo.proximo_orometro
-              ? formatearNumero(equipo.proximo_orometro) + " hrs"
+              ? formatearNumero(equipo.proximo_orometro) + " " + unidad
               : "-"
           );
+
+          // Calcular y mostrar tiempo restante
+          if (equipo.proximo_orometro && equipo.orometro_actual) {
+            const restante =
+              Number.parseFloat(equipo.proximo_orometro) -
+              Number.parseFloat(equipo.orometro_actual);
+
+            // Determinar color según proximidad
+            let colorClase = "success";
+            if (equipo.notificacion) {
+              const notificacion = Number.parseFloat(equipo.notificacion);
+              if (restante <= notificacion / 2) {
+                colorClase = "danger";
+              } else if (restante <= notificacion) {
+                colorClase = "warning";
+              }
+            }
+
+            if (restante > 0) {
+              $("#detalle-tiempo-restante").html(`
+                      <div class="alert alert-${colorClase} mb-3">
+                          <strong>Tiempo para mantenimiento:</strong> ${formatearNumero(
+                            restante
+                          )} ${unidad}
+                      </div>
+                      `);
+            } else {
+              $("#detalle-tiempo-restante").html(`
+                      <div class="alert alert-danger mb-3">
+                          <strong>¡Mantenimiento requerido!</strong> Excedido por ${formatearNumero(
+                            Math.abs(restante)
+                          )} ${unidad}
+                      </div>
+                      `);
+            }
+          } else {
+            $("#detalle-tiempo-restante").html("");
+          }
+
           $("#detalle-limite").text(
-            equipo.limite ? formatearNumero(equipo.limite) + " hrs" : "-"
+            equipo.limite ? formatearNumero(equipo.limite) + " " + unidad : "-"
           );
           $("#detalle-notificacion").text(
             equipo.notificacion
-              ? formatearNumero(equipo.notificacion) + " hrs"
+              ? formatearNumero(equipo.notificacion) + " " + unidad
               : "-"
           );
           $("#detalle-mantenimiento").text(
             equipo.mantenimiento
-              ? formatearNumero(equipo.mantenimiento) + " hrs"
+              ? formatearNumero(equipo.mantenimiento) + " " + unidad
               : "-"
           );
           $("#detalle-observaciones").text(equipo.observaciones || "-");
@@ -664,8 +1222,54 @@ document.addEventListener("DOMContentLoaded", () => {
             estadoTexto[equipo.estado] || equipo.estado
           );
 
-          // Cargar componentes asociados
-          cargarComponentesAsociados(id);
+          // Cargar componentes desde la respuesta de obtener.php
+          if (response.componentes && response.componentes.length > 0) {
+            // Mostrar tabla y ocultar mensaje
+            $("#componentes-table").removeClass("d-none");
+            $("#sin-componentes").addClass("d-none");
+
+            // Limpiar tabla
+            $("#componentes-body").empty();
+
+            // Agregar componentes a la tabla
+            response.componentes.forEach((componente) => {
+              const componenteUnidad = getUnidadOrometro(
+                componente.tipo_orometro
+              );
+              const row = `
+                          <tr>
+                              <td>${componente.codigo || "-"}</td>
+                              <td>${componente.nombre || "-"}</td>
+                              <td>${
+                                capitalizarPrimeraLetra(
+                                  componente.tipo_orometro
+                                ) || "-"
+                              }</td>
+                              <td><span class="badge rounded-pill ${obtenerClaseEstado(
+                                componente.estado
+                              )}">${capitalizarPrimeraLetra(
+                componente.estado
+              )}</span></td>
+                              <td class="text-end">${
+                                formatearNumero(componente.orometro_actual) ||
+                                "0"
+                              } ${componenteUnidad}</td>
+                              <td class="text-end">${
+                                componente.limite
+                                  ? formatearNumero(componente.limite) +
+                                    " " +
+                                    componenteUnidad
+                                  : "-"
+                              }</td>
+                          </tr>
+                      `;
+              $("#componentes-body").append(row);
+            });
+          } else {
+            // Ocultar tabla y mostrar mensaje
+            $("#componentes-table").addClass("d-none");
+            $("#sin-componentes").removeClass("d-none");
+          }
 
           // Mostrar modal
           const modalDetalle = new bootstrap.Modal(
@@ -673,15 +1277,19 @@ document.addEventListener("DOMContentLoaded", () => {
           );
           modalDetalle.show();
         } else {
-          showErrorToast(
-            response.message || "Error al obtener los detalles del equipo"
-          );
+          if (window.showErrorToast) {
+            window.showErrorToast(
+              response.message || "Error al obtener los detalles del equipo"
+            );
+          }
         }
       },
       error: (xhr, status, error) => {
         // Ocultar indicador de carga
         hideLoadingOverlay();
-        showErrorToast("Error de conexión al servidor");
+        if (window.showErrorToast) {
+          window.showErrorToast("Error de conexión al servidor");
+        }
         console.error("Error al obtener detalles del equipo:", error);
       },
     });
@@ -708,22 +1316,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Agregar componentes a la tabla
             componentes.forEach((componente) => {
+              const componenteUnidad = getUnidadOrometro(
+                componente.tipo_orometro
+              );
               const row = `
                 <tr>
                   <td>${componente.codigo || "-"}</td>
                   <td>${componente.nombre || "-"}</td>
                   <td>${
-                    capitalizarPrimeraLetra(componente.tipo_componente) || "-"
+                    capitalizarPrimeraLetra(componente.tipo_orometro) || "-"
                   }</td>
                   <td><span class="badge rounded-pill ${obtenerClaseEstado(
                     componente.estado
                   )}">${capitalizarPrimeraLetra(componente.estado)}</span></td>
                   <td class="text-end">${
                     formatearNumero(componente.orometro_actual) || "0"
-                  } hrs</td>
+                  } ${componenteUnidad}</td>
                   <td class="text-end">${
                     componente.limite
-                      ? formatearNumero(componente.limite) + " hrs"
+                      ? formatearNumero(componente.limite) +
+                        " " +
+                        componenteUnidad
                       : "-"
                   }</td>
                 </tr>
@@ -743,9 +1356,18 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       error: (xhr, status, error) => {
         console.error("Error al cargar componentes:", error);
+        console.log("Respuesta del servidor:", xhr.responseText);
+
         // Ocultar tabla y mostrar mensaje
         $("#componentes-table").addClass("d-none");
         $("#sin-componentes").removeClass("d-none");
+
+        // Mostrar mensaje de error en consola para depuración
+        if (xhr.responseText && xhr.responseText.includes("<br")) {
+          console.error(
+            "La respuesta del servidor contiene HTML en lugar de JSON. Posible error de PHP."
+          );
+        }
       },
     });
   }
@@ -768,6 +1390,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mostrar indicador de carga
         showLoadingOverlay();
 
+        // Mostrar toast de información
+        if (window.showInfoToast) {
+          window.showInfoToast("Eliminando equipo...");
+        }
+
         // Enviar solicitud
         $.ajax({
           url: getUrl("api/equipos/equipos/eliminar.php"),
@@ -780,13 +1407,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.success) {
               // Mostrar mensaje de éxito
-              showSuccessToast(response.message);
+              if (window.showSuccessToast) {
+                window.showSuccessToast(response.message);
+              }
 
               // Recargar tabla
               equiposTable.ajax.reload();
+
+              // Si el equipo eliminado es el que está seleccionado, limpiar panel de detalles
+              if (equipoSeleccionado && equipoSeleccionado.id == id) {
+                $("#equipo-detalle .detail-content").html(`
+                  <div class="detail-empty">
+                    <div class="detail-empty-icon">
+                      <i class="bi bi-info-circle"></i>
+                    </div>
+                    <div class="detail-empty-text">
+                      Seleccione un equipo para ver sus detalles
+                    </div>
+                  </div>
+                `);
+                equipoSeleccionado = null;
+              }
             } else {
               // Mostrar mensaje de error
-              showErrorToast(response.message);
+              if (window.showErrorToast) {
+                window.showErrorToast(response.message);
+              }
 
               // Si hay componentes asociados, mostrarlos
               if (response.componentes && response.componentes.length > 0) {
@@ -796,19 +1442,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 componentesHtml += "</ul>";
 
-                Swal.fire({
-                  title: "No se puede eliminar",
-                  html: `Este equipo tiene componentes asociados:<br>${componentesHtml}`,
-                  icon: "warning",
-                  confirmButtonText: "Entendido",
-                });
+                if (window.Swal) {
+                  window.Swal.fire({
+                    title: "No se puede eliminar",
+                    html: `Este equipo tiene componentes asociados:<br>${componentesHtml}`,
+                    icon: "warning",
+                    confirmButtonText: "Entendido",
+                  });
+                }
               }
             }
           },
           error: (xhr, status, error) => {
             // Ocultar indicador de carga
             hideLoadingOverlay();
-            showErrorToast("Error de conexión al servidor");
+            if (window.showErrorToast) {
+              window.showErrorToast("Error de conexión al servidor");
+            }
             console.error("Error al eliminar equipo:", error);
           },
         });
@@ -819,40 +1469,79 @@ document.addEventListener("DOMContentLoaded", () => {
   function aplicarFiltros() {
     // Obtener valores de filtros
     const estado = $("#filtro-estado").val();
+    const tipoOrometro = $("#filtro-tipo-orometro").val();
 
     // Actualizar filtros activos
     filtrosActivos = {};
     if (estado) filtrosActivos.estado = estado;
+    if (tipoOrometro) filtrosActivos.tipo_orometro = tipoOrometro;
+
+    // Mostrar toast de información
+    if (window.showInfoToast) {
+      window.showInfoToast("Aplicando filtros...");
+    }
 
     // Recargar tabla
     equiposTable.ajax.reload();
+
+    // Limpiar panel de detalles
+    $("#equipo-detalle .detail-content").html(`
+      <div class="detail-empty">
+        <div class="detail-empty-icon">
+          <i class="bi bi-info-circle"></i>
+        </div>
+        <div class="detail-empty-text">
+          Seleccione un equipo para ver sus detalles
+        </div>
+      </div>
+    `);
+    equipoSeleccionado = null;
   }
 
   // Limpiar filtros
   function limpiarFiltros() {
     // Restablecer valores de filtros
     $("#filtro-estado").val("");
+    $("#filtro-tipo-orometro").val("");
 
     // Limpiar filtros activos
     filtrosActivos = {};
 
+    // Mostrar toast de información
+    if (window.showInfoToast) {
+      window.showInfoToast("Limpiando filtros...");
+    }
+
     // Recargar tabla
     equiposTable.ajax.reload();
+
+    // Limpiar panel de detalles
+    $("#equipo-detalle .detail-content").html(`
+      <div class="detail-empty">
+        <div class="detail-empty-icon">
+          <i class="bi bi-info-circle"></i>
+        </div>
+        <div class="detail-empty-text">
+          Seleccione un equipo para ver sus detalles
+        </div>
+      </div>
+    `);
+    equipoSeleccionado = null;
   }
 
   // Mostrar indicador de carga
   function showLoadingOverlay() {
     // Si existe un componente de carga, usarlo
-    if (typeof showLoading === "function") {
-      showLoading();
+    if (typeof window.showLoading === "function") {
+      window.showLoading();
     }
   }
 
   // Ocultar indicador de carga
   function hideLoadingOverlay() {
     // Si existe un componente de carga, usarlo
-    if (typeof hideLoading === "function") {
-      hideLoading();
+    if (typeof window.hideLoading === "function") {
+      window.hideLoading();
     }
   }
 
@@ -892,19 +1581,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Botón para ver detalles del equipo
-  $("#equipos-table").on("click", ".btn-ver-equipo", function () {
+  $(document).on("click", ".btn-ver-equipo", function (e) {
+    e.stopPropagation();
     const id = $(this).data("id");
     verDetalleEquipo(id);
   });
 
   // Botón para editar equipo
-  $("#equipos-table").on("click", ".btn-editar-equipo", function () {
+  $(document).on("click", ".btn-editar-equipo", function (e) {
+    e.stopPropagation();
     const id = $(this).data("id");
     abrirModalEditar(id);
   });
 
   // Botón para eliminar equipo
-  $("#equipos-table").on("click", ".btn-eliminar-equipo", function () {
+  $(document).on("click", ".btn-eliminar-equipo", function (e) {
+    e.stopPropagation();
     const id = $(this).data("id");
     eliminarEquipo(id);
   });
@@ -928,8 +1620,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Botón para ver imagen ampliada
   $("#btn-ver-imagen").on("click", () => {
     const imagen = $("#detalle-imagen").attr("src");
-    if (imagen && typeof imageViewer !== "undefined") {
-      imageViewer.show(imagen, "Imagen del equipo");
+    try {
+      if (imagen && window.imageViewer) {
+        window.imageViewer.show(imagen, "Imagen del equipo");
+      }
+    } catch (e) {
+      {
+        window.imageViewer.show(imagen, "Imagen del equipo");
+      }
     }
   });
 
@@ -938,8 +1636,19 @@ document.addEventListener("DOMContentLoaded", () => {
     aplicarFiltros();
   });
 
+  // Botón para limpiar filtros
   $("#btn-limpiar-filtros").on("click", () => {
     limpiarFiltros();
+  });
+
+  // Evento para cambio en tipo de orómetro
+  $("#equipo-tipo-orometro").on("change", () => {
+    actualizarEtiquetasUnidad();
+  });
+
+  // Eventos para calcular próximo orómetro automáticamente
+  $("#equipo-anterior-orometro, #equipo-mantenimiento").on("input", () => {
+    calcularProximoOrometro();
   });
 
   // Inicializar tooltips
@@ -948,3 +1657,40 @@ document.addEventListener("DOMContentLoaded", () => {
     new bootstrap.Tooltip(tooltip);
   });
 });
+
+// Modificar la función para el mensaje vacío del panel de detalles
+// Reemplazar el HTML del mensaje vacío:
+
+// Mostrar mensaje de error
+$("#equipo-detalle").html(`
+  <div class="detail-header">
+    <h2 class="detail-title">Detalles del Equipo</h2>
+    <p class="detail-subtitle">Seleccione un equipo para ver información</p>
+  </div>
+  <div class="detail-content">
+    <div class="detail-empty">
+      <div class="detail-empty-icon">
+        <i class="bi bi-info-circle"></i>
+      </div>
+      <div class="detail-empty-text">
+        Seleccione un equipo de la tabla para ver sus detalles
+      </div>
+    </div>
+  </div>
+`);
+
+// Añadir función showInfoToast si no existe
+if (!window.showInfoToast) {
+  window.showInfoToast = (msg) => {
+    console.log(msg);
+    // Si existe showSuccessToast, usarlo con un estilo diferente
+    if (window.showSuccessToast) {
+      try {
+        // Intentar llamar a la función con un tipo diferente
+        window.showSuccessToast(msg, "info");
+      } catch (e) {
+        console.log("Info toast:", msg);
+      }
+    }
+  };
+}

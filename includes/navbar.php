@@ -3,8 +3,31 @@
 $pagina_actual = basename($_SERVER['PHP_SELF'], '.php');
 $request_uri = $_SERVER['REQUEST_URI'];
 $request_parts = explode('/', trim($request_uri, '/'));
-$pagina_ruta = count($request_parts) > 1 ? implode('/', $request_parts) : $request_parts[0];
-$pagina_ruta = str_replace('.php', '', $pagina_ruta);
+
+// Mejorar la detección de la ruta actual
+$pagina_ruta = '';
+if (count($request_parts) > 0) {
+    // Eliminar el nombre del archivo y la extensión
+    $last_part = end($request_parts);
+    if (strpos($last_part, '.php') !== false) {
+        array_pop($request_parts);
+    }
+    
+    // Reconstruir la ruta
+    if (count($request_parts) > 0) {
+        $pagina_ruta = implode('/', $request_parts);
+    }
+}
+
+// Verificar si estamos en un módulo específico
+$is_equipos = strpos($pagina_ruta, 'modulos/equipos/equipos') !== false;
+$is_componentes = strpos($pagina_ruta, 'modulos/equipos/componentes') !== false;
+$is_preventivo = strpos($pagina_ruta, 'modulos/mantenimiento/preventivo') !== false;
+$is_correctivo = strpos($pagina_ruta, 'modulos/mantenimiento/correctivo') !== false;
+$is_programado = strpos($pagina_ruta, 'modulos/mantenimiento/programado') !== false;
+$is_usuarios = strpos($pagina_ruta, 'modulos/administracion/usuarios') !== false;
+$is_personal = strpos($pagina_ruta, 'modulos/administracion/personal') !== false;
+$is_roles = strpos($pagina_ruta, 'modulos/administracion/roles') !== false;
 
 // Obtener datos del usuario
 $usuario = getUsuarioActual();
@@ -37,13 +60,13 @@ $usuario = getUsuarioActual();
         <div class="sidebar-section">
             <div class="sidebar-section-title">Equipos</div>
             <ul class="sidebar-menu">
-                <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/equipos/equipos' ? 'active' : ''; ?>">
+                <li class="sidebar-menu-item <?php echo $is_equipos ? 'active' : ''; ?>">
                     <a href="<?php echo getPageUrl('modulos/equipos/equipos/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-truck"></i>
                         <span>Equipos</span>
                     </a>
                 </li>
-                <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/equipos/componentes' ? 'active' : ''; ?>">
+                <li class="sidebar-menu-item <?php echo $is_componentes ? 'active' : ''; ?>">
                     <a href="<?php echo getPageUrl('modulos/equipos/componentes/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-gear"></i>
                         <span>Componentes</span>
@@ -56,19 +79,19 @@ $usuario = getUsuarioActual();
         <div class="sidebar-section">
             <div class="sidebar-section-title">Mantenimiento</div>
             <ul class="sidebar-menu">
-                <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/mantenimiento/preventivo' ? 'active' : ''; ?>">
+                <li class="sidebar-menu-item <?php echo $is_preventivo ? 'active' : ''; ?>">
                     <a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-tools"></i>
                         <span>Preventivo</span>
                     </a>
                 </li>
-                <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/mantenimiento/correctivo' ? 'active' : ''; ?>">
+                <li class="sidebar-menu-item <?php echo $is_correctivo ? 'active' : ''; ?>">
                     <a href="<?php echo getPageUrl('modulos/mantenimiento/correctivo.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-exclamation-triangle"></i>
                         <span>Correctivo</span>
                     </a>
                 </li>
-                <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/mantenimiento/programado' ? 'active' : ''; ?>">
+                <li class="sidebar-menu-item <?php echo $is_programado ? 'active' : ''; ?>">
                     <a href="<?php echo getPageUrl('modulos/mantenimiento/programado.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-calendar-check"></i>
                         <span>Programado</span>
@@ -82,19 +105,19 @@ $usuario = getUsuarioActual();
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Administración</div>
                 <ul class="sidebar-menu">
-                    <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/administracion/usuarios' ? 'active' : ''; ?>">
+                    <li class="sidebar-menu-item <?php echo $is_usuarios ? 'active' : ''; ?>">
                         <a href="<?php echo getPageUrl('modulos/administracion/usuarios.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-people"></i>
                             <span>Usuarios</span>
                         </a>
                     </li>
-                    <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/administracion/personal' ? 'active' : ''; ?>">
+                    <li class="sidebar-menu-item <?php echo $is_personal ? 'active' : ''; ?>">
                         <a href="<?php echo getPageUrl('modulos/administracion/personal.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-person-badge"></i>
                             <span>Personal</span>
                         </a>
                     </li>
-                    <li class="sidebar-menu-item <?php echo $pagina_ruta == 'modulos/administracion/roles' ? 'active' : ''; ?>">
+                    <li class="sidebar-menu-item <?php echo $is_roles ? 'active' : ''; ?>">
                         <a href="<?php echo getPageUrl('modulos/administracion/roles.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-shield-lock"></i>
                             <span>Roles y Permisos</span>
@@ -105,3 +128,6 @@ $usuario = getUsuarioActual();
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay"></div>

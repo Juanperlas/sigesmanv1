@@ -236,34 +236,30 @@ class ImageViewer {
 }
 
 // Crear instancia global
-const imageViewer = new ImageViewer();
+window.imageViewer = new ImageViewer();
 
 // Inicializar clics en imágenes para abrir el visor
 document.addEventListener("DOMContentLoaded", () => {
-  // Configurar todas las imágenes en tablas con la clase 'data-table'
-  const tables = document.querySelectorAll(".data-table");
-  tables.forEach((table) => {
-    table.addEventListener("click", (e) => {
-      const target = e.target;
-      if (target.tagName === "IMG") {
-        e.preventDefault();
+  // Configurar todas las imágenes con data-image-viewer
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target.tagName === "IMG" && target.hasAttribute("data-image-viewer")) {
+      e.preventDefault();
+      e.stopPropagation();
 
-        // Obtener información de la fila
-        const row = target.closest("tr");
-        let caption = "";
+      // Obtener información de la fila
+      const row = target.closest("tr");
+      let caption = "";
 
-        if (row) {
-          // Intentar obtener el nombre o título del elemento
-          const nameCell = row.querySelector(
-            'td[data-label="Nombre"], td[data-label="Título"]'
-          );
-          if (nameCell) {
-            caption = nameCell.textContent.trim();
-          }
+      if (row) {
+        // Intentar obtener el nombre o título del elemento
+        const nameCell = row.querySelector("td:nth-child(3)"); // Columna de nombre
+        if (nameCell) {
+          caption = nameCell.textContent.trim();
         }
-
-        imageViewer.show(target.src, caption);
       }
-    });
+
+      window.imageViewer.show(target.src, caption);
+    }
   });
 });

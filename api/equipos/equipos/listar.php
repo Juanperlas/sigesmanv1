@@ -40,15 +40,18 @@ $columns = [
     0 => 'e.id',
     1 => 'e.codigo',
     2 => 'e.nombre',
-    3 => 'e.tipo_equipo',
-    4 => 'e.marca',
-    5 => 'e.estado',
+    3 => 'e.estado',
+    4 => 'e.tipo_orometro',
+    5 => 'e.anterior_orometro',
     6 => 'e.orometro_actual',
-    7 => 'e.ubicacion'
+    7 => 'e.proximo_orometro'
 ];
 
 // Filtro de estado
 $estado = isset($_POST['estado']) ? $_POST['estado'] : '';
+
+// Filtro de tipo_orometro
+$tipoOrometro = isset($_POST['tipo_orometro']) ? $_POST['tipo_orometro'] : '';
 
 // Construir la consulta SQL
 $conexion = new Conexion();
@@ -77,6 +80,12 @@ if (!empty($search)) {
 if (!empty($estado)) {
     $sql .= " AND e.estado = ?";
     $params[] = $estado;
+}
+
+// Aplicar filtro de tipo_orometro
+if (!empty($tipoOrometro)) {
+    $sql .= " AND e.tipo_orometro = ?";
+    $params[] = $tipoOrometro;
 }
 
 // Consulta para contar registros filtrados
@@ -109,7 +118,13 @@ foreach ($equipos as $equipo) {
         'marca' => $equipo['marca'],
         'modelo' => $equipo['modelo'],
         'estado' => $equipo['estado'],
+        'tipo_orometro' => $equipo['tipo_orometro'],
+        'anterior_orometro' => $equipo['anterior_orometro'],
         'orometro_actual' => $equipo['orometro_actual'],
+        'proximo_orometro' => $equipo['proximo_orometro'],
+        'notificacion' => $equipo['notificacion'],
+        'mantenimiento' => $equipo['mantenimiento'],
+        'limite' => $equipo['limite'],
         'ubicacion' => $equipo['ubicacion'] ?: '',
         'categoria_nombre' => $equipo['categoria_nombre']
     ];
