@@ -40,7 +40,7 @@ try {
     // Obtener datos del componente
     $conexion = new Conexion();
     $componente = $conexion->selectOne(
-        "SELECT c.*, e.nombre as equipo_nombre, e.codigo as equipo_codigo
+        "SELECT c.*, e.nombre as equipo_nombre
          FROM componentes c
          LEFT JOIN equipos e ON c.equipo_id = e.id
          WHERE c.id = ?",
@@ -66,12 +66,13 @@ try {
             'codigo' => $componente['codigo'],
             'nombre' => $componente['nombre'],
             'equipo_id' => $componente['equipo_id'],
-            'equipo_nombre' => $componente['equipo_codigo'] . ' - ' . $componente['equipo_nombre'],
-            'tipo' => $componente['tipo'],
+            'equipo_nombre' => $componente['equipo_nombre'],
             'marca' => $componente['marca'],
             'modelo' => $componente['modelo'],
             'numero_serie' => $componente['numero_serie'],
             'estado' => $componente['estado'],
+            'tipo_orometro' => $componente['tipo_orometro'],
+            'anterior_orometro' => $componente['anterior_orometro'],
             'orometro_actual' => $componente['orometro_actual'],
             'proximo_orometro' => $componente['proximo_orometro'],
             'limite' => $componente['limite'],

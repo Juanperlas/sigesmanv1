@@ -18,6 +18,13 @@
   --color-pdf: #e63946;
   --color-copy: #6c757d;
   --color-print: #0d6efd;
+
+  /* Añadir estas variables a las existentes */
+  --color-section-basic: #2196f3; /* Azul vibrante */
+  --color-section-technical: #ff9800; /* Naranja vibrante */
+  --color-section-orometer: #4caf50; /* Verde vibrante */
+  --color-section-observations: #9c27b0; /* Púrpura vibrante */
+  --color-section-components: #f44336; /* Rojo vibrante */
 }
 
 /* Contenedor principal */
@@ -28,7 +35,7 @@
 /* Cabecera compacta */
 .page-header {
   margin-bottom: 0.5rem;
-  padding: 0.5rem 0;
+  padding: 0.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -51,7 +58,7 @@
 .filtros-header {
   font-size: 1rem;
   font-weight: 600;
-  padding: 0.5rem 1rem;
+  padding: 0.3rem 1rem;
   color: #fff;
   background-color: var(--color-primary);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -141,6 +148,7 @@
   border: none;
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
+  font-weight: 600;
   border-radius: 0.25rem;
   cursor: pointer;
   display: flex;
@@ -156,7 +164,7 @@
 /* Layout de dos columnas */
 .equipos-layout {
   display: grid;
-  grid-template-columns: 75% 25%;
+  grid-template-columns: 75% 24.2%;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
@@ -216,7 +224,7 @@
 
 /* Tabla de equipos */
 .table-container {
-  overflow-x: auto;
+  overflow-x: 1;
 }
 
 /* Tabla de equipos - Restaurar el diseño anterior */
@@ -233,11 +241,11 @@
 
 #equipos-table th,
 #equipos-table td {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 400;
   line-height: 17.14px;
   padding: 2px 5px;
-  height: 20px; /* Reducido a 20px como solicitado */
+  height: 20px;
   border-radius: 2px;
   border-width: 0.9px;
   vertical-align: middle;
@@ -309,14 +317,14 @@
   height: 20px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e9ecef;
+  border: 1px solid #ffffff;
   cursor: pointer;
 }
 
 /* Estados */
 .estado-badge {
   display: inline-block;
-  padding: 0.25rem 0.5rem;
+  padding: 0rem 0.3rem;
   border-radius: 0.25rem;
   font-size: 0.75rem;
   font-weight: 700; /* Más negrita para los estados */
@@ -366,8 +374,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .btn-accion:last-child {
@@ -498,6 +506,8 @@
 }
 
 .dt-buttons .btn {
+  position: relative;
+  overflow: hidden; /* Importante para contener las animaciones */
   font-size: 0.8125rem; /* Tamaño de letra uniforme */
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
@@ -513,40 +523,76 @@
   margin-right: 0.25rem;
 }
 
-/* Botón de copiar */
-.dt-button.buttons-copy {
-  background-color: var(--color-copy);
+/* Botón de copiar - Color morado/azul */
+.dt-buttons .buttons-copy {
+  background-color: #6366f1;
 }
 
-.dt-button.buttons-copy:hover {
-  background-color: #5a6268;
+.dt-buttons .buttons-copy:hover {
+  background-color: #4f46e5;
 }
 
-/* Botón de Excel */
-.dt-button.buttons-excel {
-  background-color: var(--color-excel);
+/* Botón de Excel - Color verde */
+.dt-buttons .buttons-excel {
+  background-color: #22c55e;
 }
 
-.dt-button.buttons-excel:hover {
-  background-color: #1a5c38;
+.dt-buttons .buttons-excel:hover {
+  background-color: #16a34a;
 }
 
-/* Botón de PDF */
-.dt-button.buttons-pdf {
-  background-color: var(--color-pdf);
+/* Botón de PDF - Color rojo */
+.dt-buttons .buttons-pdf {
+  background-color: #ef4444;
 }
 
-.dt-button.buttons-pdf:hover {
-  background-color: #c82333;
+.dt-buttons .buttons-pdf:hover {
+  background-color: #dc2626;
 }
 
-/* Botón de imprimir */
-.dt-button.buttons-print {
-  background-color: var(--color-print);
+/* Botón de imprimir - Color azul */
+.dt-buttons .buttons-print {
+  background-color: var(--color-primary);
 }
 
-.dt-button.buttons-print:hover {
-  background-color: #0b5ed7;
+.dt-buttons .buttons-print:hover {
+  background-color: #2563eb;
+}
+
+/* Efecto de onda/ripple */
+.dt-buttons .btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.4);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+  pointer-events: none; /* Evita que interfiera con clicks */
+}
+
+.dt-buttons .btn:hover::after {
+  animation: ripple 1.5s ease-out infinite;
+}
+
+/* Keyframes para la animación de onda */
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(15, 15); /* Reducido para que no sea tan grande */
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(25, 25); /* Reducido para que no sea tan grande */
+  }
 }
 
 /* Panel de detalles */
@@ -596,6 +642,8 @@
 .detail-content {
   padding: 1rem;
 }
+
+
 
 .detail-image {
   width: 100%;
@@ -655,21 +703,124 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  min-height: 300px;
-  color: #6c757d;
   text-align: center;
-  padding: 1rem;
+  padding: 2rem;
+  max-width: 320px;
+  z-index: 1;
+  transform: translateY(10px);
+  animation: float 6s ease-in-out infinite;
 }
 
 .detail-empty-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  color: #dee2e6;
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+  position: relative;
+  animation: pulse 3s infinite ease-in-out;
+}
+
+.detail-empty-icon::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(94, 114, 228, 0.3);
+  border-radius: 50%;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  transform: scale(0);
+  animation: ripple 3s infinite;
+}
+
+.detail-empty-icon i {
+  filter: drop-shadow(0 4px 6px rgba(94, 114, 228, 0.3));
+  animation: bounce 2s infinite;
 }
 
 .detail-empty-text {
-  font-size: 0.875rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #525f7f;
+  line-height: 1.5;
+  max-width: 280px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  animation: fadeIn 0.8s 0.3s forwards;
+}
+
+/* Animaciones */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shine {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Efecto hover */
+.detail-content:hover .detail-empty-icon {
+  color: #4553c0;
+  transform: scale(1.1);
+  transition: all 0.3s ease;
+}
+
+.detail-content:hover .detail-empty-text {
+  color: #324172;
+  transition: all 0.3s ease;
 }
 
 /* Modales mejorados */
@@ -681,7 +832,7 @@
 
 .modal-title {
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 800;
 }
 
 .modal-body {
@@ -706,8 +857,7 @@
 }
 
 .form-control-sm {
-  font-size: 0.8125rem;
-  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
   height: calc(1.5em + 0.5rem + 2px);
 }
 
@@ -728,7 +878,7 @@
 
 .card-form-header {
   background-color: #f8f9fa;
-  padding: 0.75rem 1rem;
+  padding: 0.25rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
   border-bottom: 1px solid #e9ecef;
@@ -742,20 +892,26 @@
 }
 
 .card-form-body {
-  padding: 1rem;
+  padding: 0.1rem 1rem;
 }
 
 .detalle-card {
   border: 1px solid #e9ecef;
   border-radius: 0.375rem;
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#detalle-nombre{
+  padding: 0.25rem 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .detalle-card-header {
   background-color: #f8f9fa;
-  padding: 0.75rem 1rem;
+  padding: 0.25rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
   border-bottom: 1px solid #e9ecef;
@@ -768,8 +924,13 @@
   margin-right: 0.5rem;
 }
 
+.detalle-label{
+  font-weight: 600;
+}
+
 .detalle-card-body {
-  padding: 1rem;
+  padding: 0.3rem 1rem;
+  font-size: 0.8rem;
 }
 
 /* Imagen del equipo en detalles */
@@ -1262,3 +1423,7 @@ input[readonly].form-control {
   font-size: 12px;
   cursor: pointer;
 }
+.text-muted{
+  font-size: 11px;
+}
+

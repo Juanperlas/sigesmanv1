@@ -43,7 +43,7 @@ if ($id && !tienePermiso('componentes.editar')) {
 }
 
 // Validar campos requeridos
-$camposRequeridos = ['codigo', 'nombre', 'equipo_id', 'tipo', 'estado'];
+$camposRequeridos = ['codigo', 'nombre', 'equipo_id', 'tipo_orometro', 'estado'];
 foreach ($camposRequeridos as $campo) {
     if (!isset($_POST[$campo]) || empty($_POST[$campo])) {
         http_response_code(400);
@@ -73,11 +73,12 @@ $datos = [
     'codigo' => sanitizar($_POST['codigo']),
     'nombre' => sanitizar($_POST['nombre']),
     'equipo_id' => intval($_POST['equipo_id']),
-    'tipo' => sanitizar($_POST['tipo']),
     'marca' => isset($_POST['marca']) ? sanitizar($_POST['marca']) : null,
     'modelo' => isset($_POST['modelo']) ? sanitizar($_POST['modelo']) : null,
     'numero_serie' => isset($_POST['numero_serie']) ? sanitizar($_POST['numero_serie']) : null,
     'estado' => sanitizar($_POST['estado']),
+    'tipo_orometro' => sanitizar($_POST['tipo_orometro']),
+    'anterior_orometro' => isset($_POST['anterior_orometro']) && is_numeric($_POST['anterior_orometro']) ? floatval($_POST['anterior_orometro']) : 0,
     'orometro_actual' => isset($_POST['orometro_actual']) && is_numeric($_POST['orometro_actual']) ? floatval($_POST['orometro_actual']) : 0,
     'limite' => isset($_POST['limite']) && is_numeric($_POST['limite']) ? floatval($_POST['limite']) : null,
     'notificacion' => isset($_POST['notificacion']) && is_numeric($_POST['notificacion']) ? floatval($_POST['notificacion']) : null,
@@ -85,11 +86,11 @@ $datos = [
     'observaciones' => isset($_POST['observaciones']) ? sanitizar($_POST['observaciones']) : null
 ];
 
-// Validar tipo
-$validTipos = ['horas', 'kilometros'];
-if (!in_array($datos['tipo'], $validTipos)) {
+// Validar tipo_orometro
+$validTiposOrometro = ['horas', 'kilometros'];
+if (!in_array($datos['tipo_orometro'], $validTiposOrometro)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Tipo de medición inválido']);
+    echo json_encode(['success' => false, 'message' => 'Tipo de orómetro inválido']);
     exit;
 }
 
@@ -110,9 +111,13 @@ if (isset($datos['mantenimiento']) && $datos['mantenimiento'] < 0) {
     exit;
 }
 
-// Calcular proximo_orometro
-if (isset($datos['mantenimiento']) && $datos['mantenimiento'] > 0) {
-    $datos['proximo_orometro'] = $datos['orometro_actual'] + $datos['mantenimiento'];
+// Calcular proximo_orometro solo si no se proporcionó un valor original
+if (isset($_POST['proximo_orometro_original']) && !empty($_POST['proximo_orometro_original'])) {
+    // Mantener el valor original de proximo_orometro
+    $datos['proximo_orometro'] = floatval($_POST['proximo_orometro_original']);
+} else if (isset($datos['mantenimiento']) && $datos['mantenimiento'] > 0) {
+    // Calcular nuevo valor de proximo_orometro usando la fórmula correcta
+    $datos['proximo_orometro'] = $datos['anterior_orometro'] + $datos['mantenimiento'];
 } else {
     $datos['proximo_orometro'] = null;
 }
@@ -128,6 +133,14 @@ try {
     if ($componenteExistente) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'El código ya está en uso por otro componente']);
+        exit;
+    }
+
+    // Verificar si el equipo existe
+    $equipoExiste = $conexion->selectOne("SELECT id FROM equipos WHERE id = ?", [$datos['equipo_id']]);
+    if (!$equipoExiste) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'El equipo seleccionado no existe']);
         exit;
     }
 

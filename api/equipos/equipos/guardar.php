@@ -129,8 +129,8 @@ if (isset($_POST['proximo_orometro_original']) && !empty($_POST['proximo_orometr
     // Mantener el valor original de proximo_orometro
     $datos['proximo_orometro'] = floatval($_POST['proximo_orometro_original']);
 } else if (isset($datos['mantenimiento']) && $datos['mantenimiento'] > 0) {
-    // Calcular nuevo valor de proximo_orometro
-    $datos['proximo_orometro'] = $datos['orometro_actual'] + $datos['mantenimiento'];
+    // Calcular nuevo valor de proximo_orometro usando la fórmula correcta
+    $datos['proximo_orometro'] = $datos['anterior_orometro'] + $datos['mantenimiento'];
 } else {
     $datos['proximo_orometro'] = null;
 }

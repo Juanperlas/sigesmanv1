@@ -40,15 +40,21 @@ $columns = [
     0 => 'c.id',
     1 => 'c.codigo',
     2 => 'c.nombre',
-    3 => 'e.nombre',
-    4 => 'c.marca',
-    5 => 'c.estado',
-    6 => 'c.orometro_actual'
+    3 => 'c.estado',
+    4 => 'c.tipo_orometro',
+    5 => 'c.anterior_orometro',
+    6 => 'c.orometro_actual',
+    7 => 'c.proximo_orometro'
 ];
 
-// Filtros específicos
-$equipo_id = isset($_POST['equipo_id']) ? $_POST['equipo_id'] : '';
+// Filtro de estado
 $estado = isset($_POST['estado']) ? $_POST['estado'] : '';
+
+// Filtro de tipo_orometro
+$tipoOrometro = isset($_POST['tipo_orometro']) ? $_POST['tipo_orometro'] : '';
+
+// Filtro de equipo_id
+$equipoId = isset($_POST['equipo_id']) ? intval($_POST['equipo_id']) : null;
 
 // Construir la consulta SQL
 $conexion = new Conexion();
@@ -59,7 +65,7 @@ $totalRecords = $conexion->selectOne($sqlCount);
 $totalRecords = $totalRecords['total'];
 
 // Construir la consulta con filtros
-$sql = "SELECT c.*, e.nombre as equipo_nombre, e.codigo as equipo_codigo
+$sql = "SELECT c.*, e.nombre as equipo_nombre
         FROM componentes c
         LEFT JOIN equipos e ON c.equipo_id = e.id
         WHERE 1=1";
@@ -73,16 +79,22 @@ if (!empty($search)) {
     $params = array_merge($params, [$searchParam, $searchParam, $searchParam, $searchParam, $searchParam]);
 }
 
-// Aplicar filtro de equipo
-if (!empty($equipo_id)) {
-    $sql .= " AND c.equipo_id = ?";
-    $params[] = $equipo_id;
-}
-
 // Aplicar filtro de estado
 if (!empty($estado)) {
     $sql .= " AND c.estado = ?";
     $params[] = $estado;
+}
+
+// Aplicar filtro de tipo_orometro
+if (!empty($tipoOrometro)) {
+    $sql .= " AND c.tipo_orometro = ?";
+    $params[] = $tipoOrometro;
+}
+
+// Aplicar filtro de equipo_id
+if (!empty($equipoId)) {
+    $sql .= " AND c.equipo_id = ?";
+    $params[] = $equipoId;
 }
 
 // Consulta para contar registros filtrados
@@ -112,14 +124,18 @@ foreach ($componentes as $componente) {
         'codigo' => $componente['codigo'],
         'nombre' => $componente['nombre'],
         'equipo_id' => $componente['equipo_id'],
-        'equipo_nombre' => $componente['equipo_codigo'] . ' - ' . $componente['equipo_nombre'],
-        'tipo' => $componente['tipo_orometro'], 
+        'equipo_nombre' => $componente['equipo_nombre'],
         'marca' => $componente['marca'],
         'modelo' => $componente['modelo'],
         'estado' => $componente['estado'],
+        'tipo_orometro' => $componente['tipo_orometro'],
+        'anterior_orometro' => $componente['anterior_orometro'],
         'orometro_actual' => $componente['orometro_actual'],
         'proximo_orometro' => $componente['proximo_orometro'],
-        'mantenimiento' => $componente['mantenimiento']
+        'notificacion' => $componente['notificacion'],
+        'mantenimiento' => $componente['mantenimiento'],
+        'limite' => $componente['limite'],
+        'numero_serie' => $componente['numero_serie'] ?: ''
     ];
 }
 
