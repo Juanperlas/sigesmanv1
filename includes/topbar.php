@@ -34,14 +34,14 @@ $rol_mostrado = isset($usuario['roles']) && !empty($usuario['roles']) ? ucfirst(
             </button>
 
             <div class="dropdown">
-                <button class="btn btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-icon notification-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-bell"></i>
                     <span class="badge bg-danger badge-dot"></span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end notification-dropdown">
-                    <div class="dropdown-header d-flex align-items-center justify-content-between">
-                        <h6 class="mb-0">Notificaciones</h6>
-                        <a href="#" class="text-muted small">Marcar todas como leídas</a>
+                    <div class="dropdown-header d-flex align-items-center justify-content-between"  style="color: white;">
+                        <h7 class="mb-0">Notificaciones</h7>
+                        <a href="#" class="marcar">Marcar todas como leídas</a>
                     </div>
                     <div class="dropdown-body">
                         <div class="list-group list-group-flush">
@@ -80,8 +80,21 @@ $rol_mostrado = isset($usuario['roles']) && !empty($usuario['roles']) ? ucfirst(
             </div>
 
             <div class="dropdown ms-2">
-                <button class="btn btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="<?php echo isset($usuario['fotografia']) && !empty($usuario['fotografia']) ? getAssetUrl($usuario['fotografia']) : getAssetUrl('assets/img/avatar-default.png'); ?>" alt="<?php echo isset($usuario) ? htmlspecialchars($usuario['nombre']) : 'Usuario'; ?>" class="avatar">
+                <button class="btn user-dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="d-none d-md-flex align-items-center">
+                        <div class="user-info me-2 text-end">
+                            <h6 class="user-name mb-0"><?php echo isset($usuario) ? htmlspecialchars($usuario['nombre']) : 'Usuario'; ?></h6>
+                            <span class="user-role"><?php echo $rol_mostrado; ?></span>
+                        </div>
+                        <div class="avatar-container">
+                            <img src="<?php echo isset($usuario['fotografia']) && !empty($usuario['fotografia']) ? getAssetUrl($usuario['fotografia']) : getAssetUrl('assets/img/administracion/usuarios/default.png'); ?>" alt="<?php echo isset($usuario) ? htmlspecialchars($usuario['nombre']) : 'Usuario'; ?>" class="avatar">
+                        </div>
+                    </div>
+                    <div class="d-flex d-md-none">
+                        <div class="avatar-container">
+                            <img src="<?php echo isset($usuario['fotografia']) && !empty($usuario['fotografia']) ? getAssetUrl($usuario['fotografia']) : getAssetUrl('assets/img/administracion/usuarios/default.png'); ?>" alt="<?php echo isset($usuario) ? htmlspecialchars($usuario['nombre']) : 'Usuario'; ?>" class="avatar">
+                        </div>
+                    </div>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end user-dropdown">
                     <div class="dropdown-header">

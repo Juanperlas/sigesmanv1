@@ -84,118 +84,149 @@ if (isset($_GET['demo'])) {
     <link rel="icon" href="assets/img/logo-icon.png" type="image/png" />
 
     <!-- Google Font -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- CSS Principal -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/hover.css@2.3.2/css/hover-min.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/spinkit@2.0.1/spinkit.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/login.css" />
 </head>
 
 <body>
-    <!-- Preloader -->
-    <div class="loader-bg">
-        <div class="loader-track">
-            <div class="loader-fill"></div>
+    <!-- Preloader más sutil -->
+    <div class="preloader">
+        <div class="spinner">
+            <div class="double-bounce1"></div>
+            <div class="double-bounce2"></div>
         </div>
     </div>
 
+    <!-- Canvas para Three.js -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Contenedor principal -->
     <div class="login-container">
-        <!-- Partículas de fondo -->
-        <div id="particles-js"></div>
+        <!-- Partículas interactivas -->
+        <div id="particles-container"></div>
 
-        <!-- Efecto de luz -->
-        <div class="light-effect"></div>
+        <!-- Orbe flotante -->
+        <div class="floating-orb"></div>
+        <div class="floating-orb orb-secondary"></div>
 
+        <!-- Tarjeta de login -->
         <div class="login-card">
-            <!-- Lado izquierdo - Formulario -->
-            <div class="login-form-side">
-                <div class="login-header">
-                    <div class="login-logo">
-                        <img src="assets/img/logo.png" alt="SIGESMANV1" class="img-fluid">
-                    </div>
-                    <h2>Bienvenido de nuevo</h2>
+            <!-- Efecto de brillo -->
+            <div class="glow-effect"></div>
+
+            <!-- Logo y branding -->
+            <div class="brand-section">
+                <div class="logo-container">
+                    <img src="assets/img/logo.png" alt="SIGESMANV1" class="logo">
+                </div>
+                <h1 class="brand-title">SIGESMANV1</h1>
+                <p class="brand-subtitle">Sistema de Gestión y Mantenimiento de Equipos Mineros</p>
+            </div>
+
+            <!-- Formulario de login -->
+            <div class="form-section">
+                <div class="welcome-text">
+                    <h2>Bienvenido</h2>
                     <p>Ingrese sus credenciales para acceder al sistema</p>
                 </div>
 
+                <!-- Contenedor para animación de éxito (inicialmente oculto) -->
+                <div id="success-animation" class="d-none">
+                    <div id="lottie-success"></div>
+                </div>
+
+                <!-- Alerta de error -->
                 <?php if (!empty($error)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <?php echo $error; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
+                <div class="error-alert animate__animated animate__headShake">
+                    <i class="ri-error-warning-line"></i>
+                    <span><?php echo $error; ?></span>
+                    <button type="button" class="close-alert">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </div>
                 <?php endif; ?>
 
-                <form method="post" action="login.php" class="login-form">
+                <!-- Formulario -->
+                <form id="loginForm" method="post" action="login.php" class="login-form">
                     <div class="form-group">
-                        <label for="nombre_usuario">
-                            <i class="bi bi-person"></i>
-                            <span>Nombre de Usuario</span>
-                        </label>
-                        <input type="text" id="nombre_usuario" name="nombre_usuario" placeholder="Ingrese su nombre de usuario" required>
+                        <div class="input-wrapper">
+                            <i class="ri-user-line"></i>
+                            <input type="text" id="nombre_usuario" name="nombre_usuario" placeholder="Nombre de usuario" required>
+                            <label for="nombre_usuario">Nombre de usuario</label>
+                            <div class="input-focus-effect"></div>
+                        </div>
                     </div>
 
+                    <!-- Dentro del formulario, corregir el campo de contraseña -->
                     <div class="form-group">
-                        <label for="contrasena">
-                            <i class="bi bi-lock"></i>
-                            <span>Contraseña</span>
-                        </label>
-                        <div class="password-input">
-                            <input type="password" id="contrasena" name="contrasena" placeholder="Ingrese su contraseña" required>
-                            <button type="button" class="toggle-password" tabindex="-1">
-                                <i class="bi bi-eye"></i>
+                        <div class="input-wrapper">
+                            <i class="ri-lock-line"></i>
+                            <input type="password" id="contrasena" name="contrasena" placeholder=" " required>
+                            <label for="contrasena">Contraseña</label>
+                            <button type="button" class="password-toggle" tabindex="-1">
+                                <i class="ri-eye-line"></i>
                             </button>
+                            <div class="input-focus-effect"></div>
                         </div>
                     </div>
 
                     <div class="form-options">
-                        <div class="remember-me">
-                            <input type="checkbox" id="remember" name="remember">
-                            <label for="remember">Recordarme</label>
+                        <div class="remember-option">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="remember" name="remember">
+                                <span class="checkmark"></span>
+                                <span class="label-text">Recordarme</span>
+                            </label>
                         </div>
-                        <a href="recuperar-password.php" class="forgot-password">¿Olvidó su contraseña?</a>
+                        <a href="recuperar-password.php" class="forgot-link">¿Olvidó su contraseña?</a>
                     </div>
 
-                    <button type="submit" class="login-button">
-                        <span>Iniciar Sesión</span>
-                        <i class="bi bi-arrow-right"></i>
+                    <!-- Mejorar el botón de inicio de sesión -->
+                    <button type="submit" id="loginButton" class="login-button" style="opacity: 1 !important; visibility: visible !important;">
+                        <span class="button-text">Iniciar Sesión</span>
+                        <span class="button-icon"><i class="ri-arrow-right-line"></i></span>
                     </button>
 
                     <div class="demo-access">
-                        <a href="login.php?demo=1">Acceso Demo</a>
+                        <a href="login.php?demo=1" class="demo-link">
+                            <i class="ri-rocket-line"></i> Acceso Demo
+                        </a>
                     </div>
                 </form>
             </div>
 
-            <!-- Lado derecho - Imagen -->
-            <div class="login-image-side">
-                <div class="image-overlay"></div>
-                <div class="login-content">
-                    <h1>SIGESMANV1</h1>
-                    <p>Sistema de Gestión y Mantenimiento de Equipos Mineros</p>
-                    <div class="company-info">
-                        <div class="company-logo">
-                            <img src="assets/img/logo-icon.png" alt="VOL COMPANY">
-                        </div>
-                        <div class="company-name">
-                            VOL COMPANY SAC
-                        </div>
-                    </div>
+            <!-- Información de la empresa -->
+            <div class="company-info">
+                <div class="company-logo">
+                    <img src="assets/img/logo-icon.png" alt="VOL COMPANY">
+                </div>
+                <div class="company-name">
+                    VOL COMPANY SAC
                 </div>
             </div>
         </div>
 
+        <!-- Footer -->
         <div class="login-footer">
             <p>&copy; <?php echo date('Y'); ?> SIGESMANV1 - VOL COMPANY SAC. Todos los derechos reservados.</p>
         </div>
     </div>
 
     <!-- Scripts JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
     <script src="assets/js/login.js"></script>
 </body>
 

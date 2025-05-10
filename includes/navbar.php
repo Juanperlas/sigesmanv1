@@ -80,19 +80,19 @@ $usuario = getUsuarioActual();
             <div class="sidebar-section-title">Mantenimiento</div>
             <ul class="sidebar-menu">
                 <li class="sidebar-menu-item <?php echo $is_preventivo ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo.php'); ?>" class="sidebar-menu-link">
+                    <a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-tools"></i>
                         <span>Preventivo</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item <?php echo $is_correctivo ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/mantenimiento/correctivo.php'); ?>" class="sidebar-menu-link">
+                    <a href="<?php echo getPageUrl('modulos/mantenimiento/correctivo/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-exclamation-triangle"></i>
                         <span>Correctivo</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item <?php echo $is_programado ? 'active' : ''; ?>">
-                    <a href="<?php echo getPageUrl('modulos/mantenimiento/programado.php'); ?>" class="sidebar-menu-link">
+                    <a href="<?php echo getPageUrl('modulos/mantenimiento/programado/index.php'); ?>" class="sidebar-menu-link">
                         <i class="bi bi-calendar-check"></i>
                         <span>Programado</span>
                     </a>
@@ -106,19 +106,19 @@ $usuario = getUsuarioActual();
                 <div class="sidebar-section-title">Administración</div>
                 <ul class="sidebar-menu">
                     <li class="sidebar-menu-item <?php echo $is_usuarios ? 'active' : ''; ?>">
-                        <a href="<?php echo getPageUrl('modulos/administracion/usuarios.php'); ?>" class="sidebar-menu-link">
+                        <a href="<?php echo getPageUrl('modulos/administracion/usuarios/index.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-people"></i>
                             <span>Usuarios</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item <?php echo $is_personal ? 'active' : ''; ?>">
-                        <a href="<?php echo getPageUrl('modulos/administracion/personal.php'); ?>" class="sidebar-menu-link">
+                        <a href="<?php echo getPageUrl('modulos/administracion/personal/index.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-person-badge"></i>
                             <span>Personal</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item <?php echo $is_roles ? 'active' : ''; ?>">
-                        <a href="<?php echo getPageUrl('modulos/administracion/roles.php'); ?>" class="sidebar-menu-link">
+                        <a href="<?php echo getPageUrl('modulos/administracion/rolespermisos/index.php'); ?>" class="sidebar-menu-link">
                             <i class="bi bi-shield-lock"></i>
                             <span>Roles y Permisos</span>
                         </a>

@@ -15,7 +15,7 @@ if (!estaAutenticado()) {
 
 // Obtener el tipo de datos solicitados
 $tipo = isset($_GET['tipo']) ? $_GET['tipo'] : '';
-$periodo = isset($_GET['periodo']) ? $_GET['periodo'] : '1y'; // Por defecto 1 año
+$periodo = isset($_GET['periodo']) ? $_GET['periodo'] : '-30'; // Por defecto 1 año
 $categoria = isset($_GET['categoria']) ? $_GET['categoria'] : 'todos';
 
 // Crear conexión a la base de datos
@@ -650,6 +650,7 @@ function determinarFormato($periodo)
             return '\Sem W';
         case '6m':
         case '1y':
+            return 'd M';
         case 'all':
             return 'M Y';
         default:

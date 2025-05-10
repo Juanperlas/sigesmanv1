@@ -211,6 +211,18 @@ function registrarInicioSesion($usuario_id)
 }
 
 /**
+ * Obtiene el ID del usuario actualmente autenticado
+ * @return int|null
+ */
+function getUsuarioId()
+{
+    if (!estaAutenticado()) {
+        return null;
+    }
+    return $_SESSION['usuario_id'];
+}
+
+/**
  * Registra el cierre de sesión de un usuario
  * @param int $usuario_id
  * @return bool

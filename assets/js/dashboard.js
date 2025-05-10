@@ -44,13 +44,13 @@ function initCharts() {
 
   loadChartData(
     "historial_mantenimiento",
-    "1y",
+    "30d",
     "todos",
     renderMaintenanceHistoryChart
   );
   loadChartData(
     "tendencia_mantenimiento",
-    "30d",
+    "7d",
     "todos",
     renderMaintenanceTrendChart
   );

@@ -54,19 +54,19 @@
                     <h3 class="menu-section-title">MANTENIMIENTO</h3>
                     <ul class="menu-items">
                         <li class="menu-item">
-                            <a href="../../mantenimiento/preventivo.php" class="menu-link">
+                            <a href="../../mantenimiento/preventivo/index.php" class="menu-link">
                                 <i class="bi bi-tools"></i>
                                 <span>Preventivo</span>
                             </a>
                         </li>
                         <li class="menu-item">
-                            <a href="../../mantenimiento/correctivo.php" class="menu-link">
+                            <a href="../../mantenimiento/correctivo/index.php" class="menu-link">
                                 <i class="bi bi-exclamation-triangle"></i>
                                 <span>Correctivo</span>
                             </a>
                         </li>
                         <li class="menu-item">
-                            <a href="../../mantenimiento/programado.php" class="menu-link">
+                            <a href="../../mantenimiento/programado/index.php" class="menu-link">
                                 <i class="bi bi-calendar-check"></i>
                                 <span>Programado</span>
                             </a>
@@ -78,19 +78,19 @@
                     <h3 class="menu-section-title">ADMINISTRACIÓN</h3>
                     <ul class="menu-items">
                         <li class="menu-item">
-                            <a href="../../administracion/usuarios.php" class="menu-link">
+                            <a href="../../administracion/usuarios/index.php" class="menu-link">
                                 <i class="bi bi-people"></i>
                                 <span>Usuarios</span>
                             </a>
                         </li>
                         <li class="menu-item">
-                            <a href="../../administracion/personal.php" class="menu-link">
+                            <a href="../../administracion/personal/index.php" class="menu-link">
                                 <i class="bi bi-person-badge"></i>
                                 <span>Personal</span>
                             </a>
                         </li>
                         <li class="menu-item">
-                            <a href="../../administracion/roles.php" class="menu-link">
+                            <a href="../../administracion/rolespermisos/index.php" class="menu-link">
                                 <i class="bi bi-shield-lock"></i>
                                 <span>Roles y Permisos</span>
                             </a>
