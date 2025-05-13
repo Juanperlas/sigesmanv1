@@ -3,8 +3,8 @@
 // Configuración de la conexión a la base de datos
 $host = 'localhost';
 $dbname = 'sigesman';
-$username = 'root'; // Cambia según tu configuración
-$password = ''; // Cambia según tu configuración
+$username = 'root';
+$password = '';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);

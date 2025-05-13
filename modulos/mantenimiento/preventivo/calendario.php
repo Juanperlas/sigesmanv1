@@ -23,7 +23,7 @@ $equipos = $conexion->select("SELECT id, nombre, codigo FROM equipos ORDER BY no
 $componentes = $conexion->select("SELECT id, nombre, codigo FROM componentes ORDER BY nombre");
 
 // Título de la página
-$titulo = "Mantenimiento Preventivo";
+$titulo = "Calendario de Mantenimiento Preventivo";
 
 // Definir CSS y JS adicionales para este módulo
 $css_adicional = [
@@ -45,7 +45,8 @@ $js_adicional = [
     'componentes/image-upload/image-upload.js',
     'componentes/image-viewer/image-viewer.js',
     'componentes/toast/toast.js',
-    'assets/js/mantenimiento/preventivo/preventivo.js'
+    'assets/js/mantenimiento/preventivo/preventivo.js',
+    'assets/js/mantenimiento/preventivo/calendario.js'
 ];
 
 // Incluir el header
@@ -59,15 +60,18 @@ include_once '../../../includes/topbar.php';
     <!-- Cabecera compacta -->
     <div class="d-flex justify-content-between align-items-center mb-2">
         <h1 class="page-title"><?php echo $titulo; ?></h1>
+        <a href="<?php echo $baseUrl; ?>modulos/mantenimiento/preventivo/" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Volver a Mantenimiento Preventivo
+        </a>
     </div>
 
     <!-- Filtros -->
     <div class="filtros-container">
-        <div class="filtros-header">Filtros</div>
+        <div class="filtros-header">Filtros del Calendario</div>
         <div class="filtros-content">
             <div class="filtro-grupo">
-                <label for="filtro-equipo" class="filtro-label">Equipo</label>
-                <select id="filtro-equipo" class="filtro-select">
+                <label for="cal-filtro-equipo" class="filtro-label">Equipo</label>
+                <select id="cal-filtro-equipo" class="filtro-select">
                     <option value="">Todos</option>
                     <?php foreach ($equipos as $equipo): ?>
                         <option value="<?php echo $equipo['id']; ?>"><?php echo htmlspecialchars($equipo['codigo'] . ' - ' . $equipo['nombre']); ?></option>
@@ -75,8 +79,8 @@ include_once '../../../includes/topbar.php';
                 </select>
             </div>
             <div class="filtro-grupo">
-                <label for="filtro-componente" class="filtro-label">Componente</label>
-                <select id="filtro-componente" class="filtro-select">
+                <label for="cal-filtro-componente" class="filtro-label">Componente</label>
+                <select id="cal-filtro-componente" class="filtro-select">
                     <option value="">Todos</option>
                     <?php foreach ($componentes as $componente): ?>
                         <option value="<?php echo $componente['id']; ?>"><?php echo htmlspecialchars($componente['codigo'] . ' - ' . $componente['nombre']); ?></option>
@@ -84,26 +88,18 @@ include_once '../../../includes/topbar.php';
                 </select>
             </div>
             <div class="filtro-grupo">
-                <label for="filtro-estado" class="filtro-label">Estado</label>
-                <select id="filtro-estado" class="filtro-select">
+                <label for="cal-filtro-estado" class="filtro-label">Estado</label>
+                <select id="cal-filtro-estado" class="filtro-select">
                     <option value="">Todos</option>
                     <option value="pendiente">Pendiente</option>
                     <option value="completado">Completado</option>
                 </select>
             </div>
-            <div class="filtro-grupo">
-                <label for="filtro-fecha-desde" class="filtro-label">Fecha Desde</label>
-                <input type="date" id="filtro-fecha-desde" class="filtro-select">
-            </div>
-            <div class="filtro-grupo">
-                <label for="filtro-fecha-hasta" class="filtro-label">Fecha Hasta</label>
-                <input type="date" id="filtro-fecha-hasta" class="filtro-select">
-            </div>
             <div class="filtros-actions">
-                <button id="btn-aplicar-filtros" class="btn-aplicar">
+                <button id="cal-btn-aplicar-filtros" class="btn-aplicar">
                     <i class="bi bi-funnel"></i> Aplicar
                 </button>
-                <button id="btn-limpiar-filtros" class="btn-limpiar">
+                <button id="cal-btn-limpiar-filtros" class="btn-limpiar">
                     <i class="bi bi-x"></i> Limpiar
                 </button>
                 <?php if (tienePermiso('mantenimientos.preventivo.crear')): ?>
@@ -115,79 +111,59 @@ include_once '../../../includes/topbar.php';
         </div>
     </div>
 
-    <!-- Pestañas de navegación -->
-    <ul class="nav nav-tabs" id="preventivo-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="listado-tab" data-bs-toggle="tab" data-bs-target="#listado" type="button" role="tab" aria-controls="listado" aria-selected="true">
-                <i class="bi bi-list"></i> Listado
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="calendario-tab" data-bs-toggle="tab" data-bs-target="#calendario" type="button" role="tab" aria-controls="calendario" aria-selected="false">
-                <i class="bi bi-calendar3"></i> Calendario
-            </button>
-        </li>
-    </ul>
-
-    <!-- Contenido de las pestañas -->
-    <div class="tab-content" id="preventivo-tabs-content">
-        <!-- Pestaña de Listado -->
-        <div class="tab-pane fade show active" id="listado" role="tabpanel" aria-labelledby="listado-tab">
-            <!-- Layout de dos columnas -->
-            <div class="componentes-layout">
-                <!-- Tabla de mantenimientos -->
-                <div class="componentes-table-container">
-                    <div class="table-container">
-                        <table id="mantenimientos-table" class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th width="50">Tipo</th>
-                                    <th width="100">Código</th>
-                                    <th>Nombre</th>
-                                    <th width="100">Orómetro Prog.</th>
-                                    <th width="100">Orómetro Actual</th>
-                                    <th width="100">Fecha Prog.</th>
-                                    <th width="100">Estado</th>
-                                    <th width="100">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="8" class="text-center">Cargando datos...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Panel de detalles -->
-                <div id="mantenimiento-detalle" class="componentes-detail-container">
-                    <div class="detail-header">
-                        <h2 class="detail-title">Detalles del Mantenimiento</h2>
-                        <p class="detail-subtitle">Seleccione un mantenimiento para ver información</p>
-                    </div>
-                    <div class="detail-content">
-                        <div class="detail-empty">
-                            <div class="detail-empty-icon">
-                                <i class="bi bi-info-circle"></i>
-                            </div>
-                            <div class="detail-empty-text">
-                                Seleccione un mantenimiento para ver sus detalles
-                            </div>
-                        </div>
-                    </div>
+    <!-- Calendario -->
+    <div class="card-form mb-2">
+        <div class="card-form-header">
+            <i class="bi bi-calendar3 me-2"></i>Calendario de Mantenimientos Preventivos
+            <div class="float-end">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-vista-mes">
+                        <i class="bi bi-calendar-month"></i> Mes
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-vista-semana">
+                        <i class="bi bi-calendar-week"></i> Semana
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-vista-dia">
+                        <i class="bi bi-calendar-day"></i> Día
+                    </button>
                 </div>
             </div>
         </div>
-        
-        <!-- Pestaña de Calendario -->
-        <div class="tab-pane fade" id="calendario" role="tabpanel" aria-labelledby="calendario-tab">
-            <div class="card-form mb-2 mt-3">
-                <div class="card-form-header">
-                    <i class="bi bi-calendar3 me-2"></i>Calendario de Mantenimientos Preventivos
+        <div class="card-form-body">
+            <div id="calendario-mantenimientos"></div>
+        </div>
+    </div>
+
+    <!-- Leyenda del calendario -->
+    <div class="card-form mb-2">
+        <div class="card-form-header">
+            <i class="bi bi-info-circle me-2"></i>Leyenda
+        </div>
+        <div class="card-form-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="leyenda-item">
+                        <span class="leyenda-color" style="background-color: #4361ee;"></span>
+                        <span class="leyenda-texto">Mantenimiento Pendiente</span>
+                    </div>
                 </div>
-                <div class="card-form-body">
-                    <div id="calendario-mantenimientos"></div>
+                <div class="col-md-3">
+                    <div class="leyenda-item">
+                        <span class="leyenda-color" style="background-color: #c8c8c8;"></span>
+                        <span class="leyenda-texto">Mantenimiento Completado</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="leyenda-item">
+                        <span class="leyenda-color leyenda-dashed" style="border: 2px dashed #4361ee;"></span>
+                        <span class="leyenda-texto">Fecha Estimada (por orómetro)</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="leyenda-item">
+                        <span class="leyenda-color" style="background-color: #ff6b6b;"></span>
+                        <span class="leyenda-texto">Mantenimiento Vencido</span>
+                    </div>
                 </div>
             </div>
         </div>
