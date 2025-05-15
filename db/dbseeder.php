@@ -409,36 +409,36 @@ foreach ($categorias as $categoria) {
 // 10. Poblar tabla equipos (30 filas)
 echo "Poblando equipos...\n";
 $equipos = [
-    [$categoria_ids['Pesados'], 'EQP-001', 'Camión Minero', 'general', 'Caterpillar', 'CAT 797', 'SER001', '200 ton', null, 'Planta 1', 'activo', 1500.50, 1000.00, 2000.00, 5000.00, 100.00, 1000.00, 'Equipo operativo', 'images/equipos/camion.jpg', 'kilometros'],
-    [$categoria_ids['Livianos'], 'EQP-002', 'Jeep Todo Terreno', 'general', 'Jeep', 'Wrangler', 'SER002', '4x4', null, 'Mina Norte', 'mantenimiento', 500.75, 300.00, 1000.00, 2000.00, 50.00, 500.00, 'En taller', null, 'kilometros'],
-    [$categoria_ids['Eléctricos'], 'EQP-003', 'Generador', 'general', 'Cummins', 'G500', 'SER003', '500 kW', null, 'Taller Central', 'descanso', 300.25, 200.00, 800.00, 10000.00, 200.00, 1500.00, 'En reserva', null, 'horas'],
-    [$categoria_ids['Pesados'], 'EQP-004', 'Pala Hidráulica', 'general', 'Komatsu', 'PC4000', 'SER004', '400 ton', null, 'Mina Sur', 'averiado', 900.00, 600.00, 1500.00, 6000.00, 150.00, 1200.00, 'Fallo en brazo', 'images/equipos/pala.jpg', 'horas'],
-    [$categoria_ids['Estacionarios'], 'EQP-005', 'Planta Chancadora', 'chancadora', 'Metso', 'C200', 'SER005', '500 ton/h', null, 'Planta 1', 'vendido', 200.00, 100.00, null, 8000.00, 300.00, 2000.00, 'Vendido en 2025', null, 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-006', 'Perforadora Principal', 'maquina', 'Caterpillar', 'D10', 'SER006', null, null, 'Mina Norte', 'activo', 1200.00, 800.00, 2000.00, 5000.00, 100.00, 1000.00, 'Máquina en buen estado', 'images/equipos/perforadora.jpg', 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-007', 'Cargador Frontal', 'maquina', 'Komatsu', 'WA500', 'SER007', null, null, 'Taller Central', 'mantenimiento', 800.50, 500.00, 1500.00, 3000.00, 50.00, 800.00, 'En revisión', null, 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-008', 'Excavadora', 'maquina', 'Hitachi', 'ZX200', 'SER008', null, null, 'Mina Sur', 'averiado', 600.25, 400.00, 1000.00, 2000.00, 20.00, 600.00, 'Fallo hidráulico', null, 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-009', 'Compactadora', 'maquina', 'Volvo', 'SD110', 'SER009', null, null, 'Almacén', 'descanso', 400.75, 300.00, 800.00, 2500.00, 75.00, 700.00, 'No operativa temporalmente', null, 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-010', 'Grúa Móvil', 'maquina', 'Liebherr', 'LTM 1050', 'SER010', null, null, null, 'vendido', 300.00, 200.00, null, 4000.00, 150.00, 1000.00, 'Vendido en 2025', null, 'horas'],
-    [$categoria_ids['Motores'], 'EQP-011', 'Motor Principal', 'motor', 'Siemens', null, 'SER011', '100 HP', 'Trifásico', 'Planta 1', 'activo', 1100.00, 700.00, 2000.00, 5000.00, 100.00, 800.00, 'Motor en buen estado', 'images/equipos/motor1.jpg', 'horas'],
-    [$categoria_ids['Motores'], 'EQP-012', 'Motor Secundario', 'motor', 'WEG', null, 'SER012', '75 HP', 'Trifásico', 'Taller Central', 'mantenimiento', 700.50, 500.00, 1500.00, 3000.00, 50.00, 600.00, 'En revisión', null, 'horas'],
-    [$categoria_ids['Motores'], 'EQP-013', 'Motor Auxiliar', 'motor', 'ABB', null, 'SER013', '50 HP', 'Monofásico', 'Mina Norte', 'averiado', 500.25, 300.00, 1000.00, 2000.00, 20.00, 500.00, 'Sobrecalentamiento', null, 'horas'],
-    [$categoria_ids['Motores'], 'EQP-014', 'Motor de Reserva', 'motor', 'Toshiba', null, 'SER014', '120 HP', 'Trifásico', 'Almacén', 'descanso', 300.75, 200.00, 800.00, 2500.00, 75.00, 700.00, 'En reserva', null, 'horas'],
-    [$categoria_ids['Motores'], 'EQP-015', 'Motor Antiguo', 'motor', 'General Electric', null, 'SER015', '90 HP', 'Trifásico', null, 'vendido', 200.00, 100.00, null, 4000.00, 150.00, 800.00, 'Vendido en 2025', null, 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-016', 'Molino Principal', 'molino', 'Metso', null, 'SER016', '300 ton/h', null, 'Planta 1', 'activo', 400.50, 300.00, 800.00, 5000.00, 100.00, 1500.00, 'Operativo', 'images/equipos/molino.jpg', 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-017', 'Equipo de Remolienda', 'remolienda', 'FLSmidth', null, 'SER017', '200 ton/h', null, 'Taller Central', 'mantenimiento', 200.25, 100.00, 500.00, 3000.00, 50.00, 1200.00, 'En revisión', null, 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-018', 'Concentrador iCON', 'icon', 'iCON', null, 'SER018', '50 ton/h', null, 'Almacén', 'descanso', 100.00, 50.00, 300.00, 2000.00, 20.00, 1000.00, 'En reserva', null, 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-019', 'Molino Secundario', 'molino', 'Outotec', null, 'SER019', '250 ton/h', null, 'Mina Sur', 'averiado', 600.75, 400.00, 1000.00, 4000.00, 80.00, 1500.00, 'Fallo en rotor', null, 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-020', 'Remolienda Antigua', 'remolienda', 'Metso', null, 'SER020', '150 ton/h', null, null, 'vendido', 50.00, 30.00, null, 6000.00, 120.00, 1200.00, 'Vendido en 2025', null, 'horas'],
-    [$categoria_ids['Pesados'], 'EQP-021', 'Camión Minero Secundario', 'general', 'Komatsu', '930E', 'SER021', '300 ton', null, 'Mina Norte', 'activo', 1800.25, 1200.00, 2500.00, 6000.00, 150.00, 1000.00, 'Operativo', null, 'kilometros'],
-    [$categoria_ids['Livianos'], 'EQP-022', 'Vehículo Utilitario', 'general', 'Toyota', 'Hilux', 'SER022', '4x4', null, 'Planta 2', 'activo', 600.50, 400.00, 1200.00, 2500.00, 60.00, 500.00, 'Buen estado', null, 'kilometros'],
-    [$categoria_ids['Estacionarios'], 'EQP-023', 'Planta Pulverizadora', 'pulverizadora', 'FLSmidth', 'P300', 'SER023', '400 ton/h', null, 'Planta 1', 'activo', 900.75, 600.00, 1500.00, 7000.00, 200.00, 2000.00, 'Operativa', null, 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-024', 'Perforadora Secundaria', 'maquina', 'Sandvik', 'DX800', 'SER024', null, null, 'Mina Sur', 'activo', 1100.00, 700.00, 2000.00, 5000.00, 100.00, 1000.00, 'En buen estado', null, 'horas'],
-    [$categoria_ids['Máquinas'], 'EQP-025', 'Cargador Subterráneo', 'maquina', 'Caterpillar', 'R1700', 'SER025', null, null, 'Mina Norte', 'mantenimiento', 700.25, 500.00, 1500.00, 3000.00, 50.00, 800.00, 'En revisión', null, 'horas'],
-    [$categoria_ids['Motores'], 'EQP-026', 'Motor de Bombeo', 'motor', 'Siemens', null, 'SER026', '150 HP', 'Trifásico', 'Planta 2', 'activo', 1200.50, 800.00, 2000.00, 5000.00, 100.00, 800.00, 'Operativo', null, 'horas'],
-    [$categoria_ids['Motores'], 'EQP-027', 'Motor de Ventilación', 'motor', 'WEG', null, 'SER027', '80 HP', 'Trifásico', 'Mina Sur', 'averiado', 400.75, 300.00, 1000.00, 2000.00, 20.00, 600.00, 'Fallo eléctrico', null, 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-028', 'Molino Terciario', 'molino', 'Metso', null, 'SER028', '200 ton/h', null, 'Planta 1', 'activo', 500.25, 400.00, 1000.00, 4000.00, 80.00, 1500.00, 'Operativo', null, 'horas'],
-    [$categoria_ids['Eléctricos'], 'EQP-029', 'Concentrador Secundario', 'icon', 'iCON', null, 'SER029', '60 ton/h', null, 'Almacén', 'descanso', 150.00, 100.00, 500.00, 2000.00, 20.00, 1000.00, 'En reserva', null, 'horas'],
-    [$categoria_ids['Pesados'], 'EQP-030', 'Pala Eléctrica', 'general', 'P&H', '4100XPC', 'SER030', '500 ton', null, 'Mina Norte', 'activo', 2000.00, 1500.00, 3000.00, 7000.00, 200.00, 1200.00, 'Operativa', null, 'horas'],
+    [$categoria_ids['Pesados'], 'EQP-001', 'Camión Minero', 'general', 'Caterpillar', 'CAT 797', 'SER001', '200 ton', null, 'Planta 1', 'activo', 1500.50, 1000.00, 2000.00, 10.00, 100.00, 1000.00, 'Equipo operativo', null, 'kilometros'],
+    [$categoria_ids['Livianos'], 'EQP-002', 'Jeep Todo Terreno', 'general', 'Jeep', 'Wrangler', 'SER002', '4x4', null, 'Mina Norte', 'mantenimiento', 500.75, 300.00, 1000.00, 10.00, 50.00, 500.00, 'En taller', null, 'kilometros'],
+    [$categoria_ids['Eléctricos'], 'EQP-003', 'Generador', 'general', 'Cummins', 'G500', 'SER003', '500 kW', null, 'Taller Central', 'descanso', 300.25, 200.00, 800.00, 10.00, 200.00, 1500.00, 'En reserva', null, 'horas'],
+    [$categoria_ids['Pesados'], 'EQP-004', 'Pala Hidráulica', 'general', 'Komatsu', 'PC4000', 'SER004', '400 ton', null, 'Mina Sur', 'averiado', 900.00, 600.00, 1500.00, 10.00, 150.00, 1200.00, 'Fallo en brazo', 'images/equipos/pala.jpg', 'horas'],
+    [$categoria_ids['Estacionarios'], 'EQP-005', 'Planta Chancadora', 'chancadora', 'Metso', 'C200', 'SER005', '500 ton/h', null, 'Planta 1', 'vendido', 200.00, 100.00, null, 10.00, 300.00, 2000.00, 'Vendido en 2025', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-006', 'Perforadora Principal', 'maquina', 'Caterpillar', 'D10', 'SER006', null, null, 'Mina Norte', 'activo', 1200.00, 800.00, 2000.00, 10.00, 100.00, 1000.00, 'Máquina en buen estado', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-007', 'Cargador Frontal', 'maquina', 'Komatsu', 'WA500', 'SER007', null, null, 'Taller Central', 'mantenimiento', 800.50, 500.00, 1500.00, 10.00, 50.00, 800.00, 'En revisión', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-008', 'Excavadora', 'maquina', 'Hitachi', 'ZX200', 'SER008', null, null, 'Mina Sur', 'averiado', 600.25, 400.00, 1000.00, 10.00, 20.00, 600.00, 'Fallo hidráulico', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-009', 'Compactadora', 'maquina', 'Volvo', 'SD110', 'SER009', null, null, 'Almacén', 'descanso', 400.75, 300.00, 800.00, 10.00, 75.00, 700.00, 'No operativa temporalmente', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-010', 'Grúa Móvil', 'maquina', 'Liebherr', 'LTM 1050', 'SER010', null, null, null, 'vendido', 300.00, 200.00, null, 10.00, 150.00, 1000.00, 'Vendido en 2025', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-011', 'Motor Principal', 'motor', 'Siemens', null, 'SER011', '100 HP', 'Trifásico', 'Planta 1', 'activo', 1100.00, 700.00, 2000.00, 10.00, 100.00, 800.00, 'Motor en buen estado', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-012', 'Motor Secundario', 'motor', 'WEG', null, 'SER012', '75 HP', 'Trifásico', 'Taller Central', 'mantenimiento', 700.50, 500.00, 1500.00, 10.00, 50.00, 600.00, 'En revisión', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-013', 'Motor Auxiliar', 'motor', 'ABB', null, 'SER013', '50 HP', 'Monofásico', 'Mina Norte', 'averiado', 500.25, 300.00, 1000.00, 10.00, 20.00, 500.00, 'Sobrecalentamiento', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-014', 'Motor de Reserva', 'motor', 'Toshiba', null, 'SER014', '120 HP', 'Trifásico', 'Almacén', 'descanso', 300.75, 200.00, 800.00, 10.00, 75.00, 700.00, 'En reserva', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-015', 'Motor Antiguo', 'motor', 'General Electric', null, 'SER015', '90 HP', 'Trifásico', null, 'vendido', 200.00, 100.00, null, 10.00, 150.00, 800.00, 'Vendido en 2025', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-016', 'Molino Principal', 'molino', 'Metso', null, 'SER016', '300 ton/h', null, 'Planta 1', 'activo', 400.50, 300.00, 800.00, 10.00, 100.00, 1500.00, 'Operativo', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-017', 'Equipo de Remolienda', 'remolienda', 'FLSmidth', null, 'SER017', '200 ton/h', null, 'Taller Central', 'mantenimiento', 200.25, 100.00, 500.00, 10.00, 50.00, 1200.00, 'En revisión', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-018', 'Concentrador iCON', 'icon', 'iCON', null, 'SER018', '50 ton/h', null, 'Almacén', 'descanso', 100.00, 50.00, 300.00, 10.00, 20.00, 1000.00, 'En reserva', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-019', 'Molino Secundario', 'molino', 'Outotec', null, 'SER019', '250 ton/h', null, 'Mina Sur', 'averiado', 600.75, 400.00, 1000.00, 10.00, 80.00, 1500.00, 'Fallo en rotor', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-020', 'Remolienda Antigua', 'remolienda', 'Metso', null, 'SER020', '150 ton/h', null, null, 'vendido', 50.00, 30.00, null, 10.00, 120.00, 1200.00, 'Vendido en 2025', null, 'horas'],
+    [$categoria_ids['Pesados'], 'EQP-021', 'Camión Minero Secundario', 'general', 'Komatsu', '930E', 'SER021', '300 ton', null, 'Mina Norte', 'activo', 1800.25, 1200.00, 2500.00, 10.00, 150.00, 1000.00, 'Operativo', null, 'kilometros'],
+    [$categoria_ids['Livianos'], 'EQP-022', 'Vehículo Utilitario', 'general', 'Toyota', 'Hilux', 'SER022', '4x4', null, 'Planta 2', 'activo', 600.50, 400.00, 1200.00, 10.00, 60.00, 500.00, 'Buen estado', null, 'kilometros'],
+    [$categoria_ids['Estacionarios'], 'EQP-023', 'Planta Pulverizadora', 'pulverizadora', 'FLSmidth', 'P300', 'SER023', '400 ton/h', null, 'Planta 1', 'activo', 900.75, 600.00, 10.00, 7000.00, 200.00, 2000.00, 'Operativa', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-024', 'Perforadora Secundaria', 'maquina', 'Sandvik', 'DX800', 'SER024', null, null, 'Mina Sur', 'activo', 1100.00, 700.00, 2000.00, 20.00, 100.00, 1000.00, 'En buen estado', null, 'horas'],
+    [$categoria_ids['Máquinas'], 'EQP-025', 'Cargador Subterráneo', 'maquina', 'Caterpillar', 'R1700', 'SER025', null, null, 'Mina Norte', 'mantenimiento', 700.25, 500.00, 20.00, 3000.00, 50.00, 800.00, 'En revisión', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-026', 'Motor de Bombeo', 'motor', 'Siemens', null, 'SER026', '150 HP', 'Trifásico', 'Planta 2', 'activo', 1200.50, 800.00, 2000.00, 20.00, 100.00, 800.00, 'Operativo', null, 'horas'],
+    [$categoria_ids['Motores'], 'EQP-027', 'Motor de Ventilación', 'motor', 'WEG', null, 'SER027', '80 HP', 'Trifásico', 'Mina Sur', 'averiado', 400.75, 300.00, 1000.00, 20.00, 20.00, 600.00, 'Fallo eléctrico', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-028', 'Molino Terciario', 'molino', 'Metso', null, 'SER028', '200 ton/h', null, 'Planta 1', 'activo', 500.25, 400.00, 1000.00, 20.00, 80.00, 1500.00, 'Operativo', null, 'horas'],
+    [$categoria_ids['Eléctricos'], 'EQP-029', 'Concentrador Secundario', 'icon', 'iCON', null, 'SER029', '60 ton/h', null, 'Almacén', 'descanso', 150.00, 100.00, 500.00, 10.00, 20.00, 1000.00, 'En reserva', null, 'horas'],
+    [$categoria_ids['Pesados'], 'EQP-030', 'Pala Eléctrica', 'general', 'P&H', '4100XPC', 'SER030', '500 ton', null, 'Mina Norte', 'activo', 2000.00, 1500.00, 3000.00, 20.00, 200.00, 1200.00, 'Operativa', null, 'horas'],
 ];
 
 $equipo_ids = [];
@@ -450,26 +450,26 @@ foreach ($equipos as $equipo) {
 // 11. Poblar tabla componentes (20 filas)
 echo "Poblando componentes...\n";
 $componentes = [
-    [$equipo_ids[0], 'CMP-001', 'Motor Principal', 'Caterpillar', 'SER-C01', 'C18', 'horas', 1200.00, 800.00, 1800.00, 'activo', 5000.00, 100.00, 800.00, 'Componente crítico', 'images/componentes/motor.jpg'],
-    [$equipo_ids[0], 'CMP-002', 'Sistema Hidráulico', 'Bosch', 'SER-C02', 'H500', 'horas', 800.50, 500.00, 1500.00, 'mantenimiento', 3000.00, 50.00, 600.00, 'En revisión', null],
-    [$equipo_ids[1], 'CMP-003', 'Transmisión', 'Jeep', 'SER-C03', 'T400', 'kilometros', 600.25, 400.00, 1000.00, 'descanso', 2000.00, 20.00, 500.00, 'Buen estado', null],
-    [$equipo_ids[3], 'CMP-004', 'Cuchilla', 'Komatsu', 'SER-C04', 'K300', 'horas', 700.00, 500.00, 1200.00, 'averiado', 4000.00, 80.00, 600.00, 'Desgaste crítico', null],
-    [$equipo_ids[5], 'CMP-005', 'Rotor', 'Metso', 'SER-C05', 'R200', 'horas', 150.00, 100.00, 500.00, 'activo', 6000.00, 120.00, 1000.00, 'Operativo', 'images/componentes/rotor.jpg'],
-    [$equipo_ids[6], 'CMP-006', 'Sistema de Perforación', 'Caterpillar', 'SER-C06', 'P100', 'horas', 1000.00, 700.00, 2000.00, 'activo', 5000.00, 100.00, 800.00, 'Buen estado', null],
-    [$equipo_ids[7], 'CMP-007', 'Cuchara', 'Komatsu', 'SER-C07', 'C500', 'horas', 600.50, 400.00, 1500.00, 'mantenimiento', 3000.00, 50.00, 600.00, 'En revisión', null],
-    [$equipo_ids[8], 'CMP-008', 'Brazo Hidráulico', 'Hitachi', 'SER-C08', 'B200', 'horas', 400.25, 300.00, 1000.00, 'averiado', 2000.00, 20.00, 500.00, 'Fallo crítico', null],
-    [$equipo_ids[9], 'CMP-009', 'Rodillo', 'Volvo', 'SER-C09', 'R110', 'horas', 300.75, 200.00, 800.00, 'descanso', 2500.00, 75.00, 600.00, 'En reserva', null],
-    [$equipo_ids[10], 'CMP-010', 'Estator', 'Siemens', 'SER-C10', 'S100', 'horas', 900.00, 600.00, 2000.00, 'activo', 5000.00, 100.00, 800.00, 'Operativo', null],
-    [$equipo_ids[11], 'CMP-011', 'Rotor', 'WEG', 'SER-C11', 'R75', 'horas', 600.50, 400.00, 1500.00, 'mantenimiento', 3000.00, 50.00, 600.00, 'En revisión', null],
-    [$equipo_ids[15], 'CMP-012', 'Cámara de Molienda', 'Metso', 'SER-C12', 'M300', 'horas', 300.25, 200.00, 800.00, 'activo', 5000.00, 100.00, 1000.00, 'Buen estado', null],
-    [$equipo_ids[16], 'CMP-013', 'Sistema de Alimentación', 'FLSmidth', 'SER-C13', 'F200', 'horas', 150.00, 100.00, 500.00, 'mantenimiento', 3000.00, 50.00, 800.00, 'En revisión', null],
-    [$equipo_ids[17], 'CMP-014', 'Concentrador', 'iCON', 'SER-C14', 'I50', 'horas', 80.00, 50.00, 300.00, 'descanso', 2000.00, 20.00, 600.00, 'En reserva', null],
-    [$equipo_ids[18], 'CMP-015', 'Rotor Secundario', 'Outotec', 'SER-C15', 'R250', 'horas', 500.75, 300.00, 1000.00, 'averiado', 4000.00, 80.00, 800.00, 'Fallo crítico', null],
-    [$equipo_ids[20], 'CMP-016', 'Motor Secundario', 'Komatsu', 'SER-C16', 'K930', 'horas', 1400.00, 900.00, 2000.00, 'activo', 5000.00, 100.00, 800.00, 'Operativo', null],
-    [$equipo_ids[22], 'CMP-017', 'Sistema de Trituración', 'FLSmidth', 'SER-C17', 'T400', 'horas', 700.50, 500.00, 1500.00, 'activo', 6000.00, 120.00, 1000.00, 'Buen estado', null],
-    [$equipo_ids[23], 'CMP-018', 'Brazo Perforador', 'Sandvik', 'SER-C18', 'P800', 'horas', 900.00, 600.00, 2000.00, 'activo', 5000.00, 100.00, 800.00, 'Operativo', null],
-    [$equipo_ids[25], 'CMP-019', 'Impulsor', 'Siemens', 'SER-C19', 'I150', 'horas', 1000.00, 700.00, 2000.00, 'activo', 5000.00, 100.00, 800.00, 'Buen estado', null],
-    [$equipo_ids[27], 'CMP-020', 'Cámara de Molienda', 'Metso', 'SER-C20', 'M200', 'horas', 400.25, 300.00, 1000.00, 'activo', 4000.00, 80.00, 1000.00, 'Operativa', null],
+    [$equipo_ids[0], 'CMP-001', 'Motor Principal', 'Caterpillar', 'SER-C01', 'C18', 'horas', 1200.00, 800.00, 1800.00, 'activo', 10.00, 100.00, 800.00, 'Componente crítico', null],
+    [$equipo_ids[0], 'CMP-002', 'Sistema Hidráulico', 'Bosch', 'SER-C02', 'H500', 'horas', 800.50, 500.00, 1500.00, 'mantenimiento', 10.00, 50.00, 600.00, 'En revisión', null],
+    [$equipo_ids[1], 'CMP-003', 'Transmisión', 'Jeep', 'SER-C03', 'T400', 'kilometros', 600.25, 400.00, 1000.00, 'descanso', 10.00, 20.00, 500.00, 'Buen estado', null],
+    [$equipo_ids[3], 'CMP-004', 'Cuchilla', 'Komatsu', 'SER-C04', 'K300', 'horas', 700.00, 500.00, 1200.00, 'averiado', 10.00, 80.00, 600.00, 'Desgaste crítico', null],
+    [$equipo_ids[5], 'CMP-005', 'Rotor', 'Metso', 'SER-C05', 'R200', 'horas', 150.00, 100.00, 500.00, 'activo', 10.00, 120.00, 1000.00, 'Operativo', null],
+    [$equipo_ids[6], 'CMP-006', 'Sistema de Perforación', 'Caterpillar', 'SER-C06', 'P100', 'horas', 1000.00, 700.00, 2000.00, 'activo', 10.00, 100.00, 800.00, 'Buen estado', null],
+    [$equipo_ids[7], 'CMP-007', 'Cuchara', 'Komatsu', 'SER-C07', 'C500', 'horas', 600.50, 400.00, 1500.00, 'mantenimiento', 10.00, 50.00, 600.00, 'En revisión', null],
+    [$equipo_ids[8], 'CMP-008', 'Brazo Hidráulico', 'Hitachi', 'SER-C08', 'B200', 'horas', 400.25, 300.00, 1000.00, 'averiado', 10.00, 20.00, 500.00, 'Fallo crítico', null],
+    [$equipo_ids[9], 'CMP-009', 'Rodillo', 'Volvo', 'SER-C09', 'R110', 'horas', 300.75, 200.00, 800.00, 'descanso', 10.00, 75.00, 600.00, 'En reserva', null],
+    [$equipo_ids[10], 'CMP-010', 'Estator', 'Siemens', 'SER-C10', 'S100', 'horas', 900.00, 600.00, 2000.00, 'activo', 10.00, 100.00, 800.00, 'Operativo', null],
+    [$equipo_ids[11], 'CMP-011', 'Rotor', 'WEG', 'SER-C11', 'R75', 'horas', 600.50, 400.00, 1500.00, 'mantenimiento', 10.00, 50.00, 600.00, 'En revisión', null],
+    [$equipo_ids[15], 'CMP-012', 'Cámara de Molienda', 'Metso', 'SER-C12', 'M300', 'horas', 300.25, 200.00, 800.00, 'activo', 10.00, 100.00, 1000.00, 'Buen estado', null],
+    [$equipo_ids[16], 'CMP-013', 'Sistema de Alimentación', 'FLSmidth', 'SER-C13', 'F200', 'horas', 150.00, 100.00, 500.00, 'mantenimiento', 10.00, 50.00, 800.00, 'En revisión', null],
+    [$equipo_ids[17], 'CMP-014', 'Concentrador', 'iCON', 'SER-C14', 'I50', 'horas', 80.00, 50.00, 300.00, 'descanso', 10.00, 20.00, 600.00, 'En reserva', null],
+    [$equipo_ids[18], 'CMP-015', 'Rotor Secundario', 'Outotec', 'SER-C15', 'R250', 'horas', 500.75, 300.00, 1000.00, 'averiado', 10.00, 80.00, 800.00, 'Fallo crítico', null],
+    [$equipo_ids[20], 'CMP-016', 'Motor Secundario', 'Komatsu', 'SER-C16', 'K930', 'horas', 1400.00, 900.00, 2000.00, 'activo', 10.00, 100.00, 800.00, 'Operativo', null],
+    [$equipo_ids[22], 'CMP-017', 'Sistema de Trituración', 'FLSmidth', 'SER-C17', 'T400', 'horas', 700.50, 500.00, 1500.00, 'activo', 10.00, 120.00, 1000.00, 'Buen estado', null],
+    [$equipo_ids[23], 'CMP-018', 'Brazo Perforador', 'Sandvik', 'SER-C18', 'P800', 'horas', 900.00, 600.00, 2000.00, 'activo', 10.00, 100.00, 800.00, 'Operativo', null],
+    [$equipo_ids[25], 'CMP-019', 'Impulsor', 'Siemens', 'SER-C19', 'I150', 'horas', 1000.00, 700.00, 2000.00, 'activo', 10.00, 100.00, 800.00, 'Buen estado', null],
+    [$equipo_ids[27], 'CMP-020', 'Cámara de Molienda', 'Metso', 'SER-C20', 'M200', 'horas', 400.25, 300.00, 1000.00, 'activo', 10.00, 80.00, 1000.00, 'Operativa', null],
 ];
 
 $componente_ids = [];
@@ -524,7 +524,7 @@ for ($day = 1; $day <= 30; $day++) {
 foreach ($historial_trabajo_componentes as $htc) {
     ejecutarConsulta($pdo, "INSERT INTO historial_trabajo_componentes (componente_id, fecha, horas_trabajadas, fuente, observaciones) VALUES (?, ?, ?, ?, ?)", $htc);
 }
-
+/*
 // 14. Poblar tabla mantenimiento_correctivo (15 filas)
 echo "Poblando mantenimiento_correctivo...\n";
 $mantenimientos_correctivos = [
@@ -631,8 +631,9 @@ $notificaciones = [
 foreach ($notificaciones as $notificacion) {
     ejecutarConsulta($pdo, "INSERT INTO notificaciones (usuario_id, mantenimiento_preventivo_id, mensaje, leida) VALUES (?, ?, ?, ?)", $notificacion);
 }
-
+*/
 // 18. Poblar tabla historial_mantenimiento (15 filas, solo mantenimientos completados)
+/*
 echo "Poblando historial_mantenimiento...\n";
 $historial_mantenimientos = [
     ['correctivo', $mantenimiento_correctivo_ids[1], null, $componente_ids[1], 'Fuga en sistema hidráulico', '2025-04-21 16:00:00', 800.00, 'Reparado con éxito', null],
@@ -655,6 +656,5 @@ $historial_mantenimientos = [
 foreach ($historial_mantenimientos as $hm) {
     ejecutarConsulta($pdo, "INSERT INTO historial_mantenimiento (tipo_mantenimiento, mantenimiento_id, equipo_id, componente_id, descripcion, fecha_realizado, orometro_realizado, observaciones, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", $hm);
 }
-
+*/
 echo "Seeder completado exitosamente.\n";
-?>

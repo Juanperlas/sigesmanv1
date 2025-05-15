@@ -10,7 +10,7 @@ if (!estaAutenticado()) {
 }
 
 // Verificar permiso
-if (!tienePermiso('mantenimientos.preventivo.ver')) {
+if (!tienePermiso('mantenimientos.preventivo.acceder')) {
     header("Location: ../../../dashboard.php?error=no_autorizado");
     exit;
 }
@@ -28,19 +28,19 @@ $titulo = "Mantenimiento Preventivo";
 // Definir CSS y JS adicionales para este módulo
 $css_adicional = [
     'assets/plugins/datatables/css/datatables.min.css',
+    'assets/plugins/datepicker/css/datepicker-bs5.min.css',
     'assets/css/mantenimiento/preventivo/preventivo.css',
     'componentes/image-upload/image-upload.css',
     'componentes/image-viewer/image-viewer.css',
-    'componentes/toast/toast.css',
-    'assets/plugins/fullcalendar/main.min.css'
+    'componentes/toast/toast.css'
 ];
 
 $js_adicional = [
     'assets/js/jquery-3.7.1.min.js',
     'assets/js/jquery.validate.min.js',
     'assets/plugins/datatables/js/datatables.min.js',
-    'assets/plugins/fullcalendar/main.min.js',
-    'assets/plugins/fullcalendar/locales/es.js',
+    'assets/plugins/datepicker/js/datepicker-full.min.js',
+    //'assets/plugins/vanillajs-datepicker/es.js',
     'componentes/ajax/ajax-utils.js',
     'componentes/image-upload/image-upload.js',
     'componentes/image-viewer/image-viewer.js',
@@ -59,6 +59,46 @@ include_once '../../../includes/topbar.php';
     <!-- Cabecera compacta -->
     <div class="d-flex justify-content-between align-items-center mb-2">
         <h1 class="page-title"><?php echo $titulo; ?></h1>
+
+        <!-- Botones de navegación -->
+        <div class="btn-group">
+            <a href="index.php" class="btn btn-sm btn-primary active">
+                <i class="bi bi-list-ul"></i> Listado
+            </a>
+            <a href="calendario.php" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-calendar3"></i> Calendario
+            </a>
+        </div>
+    </div>
+
+    <!-- Contenedor de verificación -->
+    <div id="verificacion-container" class="alert alert-info" style="display: none;">
+        <div class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+                <span class="visually-hidden">Verificando...</span>
+            </div>
+            <div>Verificando mantenimientos preventivos pendientes...</div>
+        </div>
+    </div>
+
+    <!-- Contenedor de resultados de verificación -->
+    <div id="verificacion-resultados" class="alert alert-warning" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div id="verificacion-mensaje">Se encontraron equipos/componentes sin mantenimientos preventivos programados.</div>
+            <div>
+                <button id="btn-crear-faltantes" class="btn btn-sm btn-warning">
+                    <i class="bi bi-plus-circle"></i> Crear Registros
+                </button>
+                <button id="btn-ignorar-faltantes" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="bi bi-x-circle"></i> Ignorar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje de todo actualizado -->
+    <div id="todo-actualizado" class="alert alert-success" style="display: none;">
+        <i class="bi bi-check-circle-fill me-2"></i> Todos los mantenimientos preventivos están actualizados.
     </div>
 
     <!-- Filtros -->
@@ -66,423 +106,120 @@ include_once '../../../includes/topbar.php';
         <div class="filtros-header">Filtros</div>
         <div class="filtros-content">
             <div class="filtro-grupo">
-                <label for="filtro-equipo" class="filtro-label">Equipo</label>
-                <select id="filtro-equipo" class="filtro-select">
-                    <option value="">Todos</option>
-                    <?php foreach ($equipos as $equipo): ?>
-                        <option value="<?php echo $equipo['id']; ?>"><?php echo htmlspecialchars($equipo['codigo'] . ' - ' . $equipo['nombre']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filtro-grupo">
-                <label for="filtro-componente" class="filtro-label">Componente</label>
-                <select id="filtro-componente" class="filtro-select">
-                    <option value="">Todos</option>
-                    <?php foreach ($componentes as $componente): ?>
-                        <option value="<?php echo $componente['id']; ?>"><?php echo htmlspecialchars($componente['codigo'] . ' - ' . $componente['nombre']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filtro-grupo">
                 <label for="filtro-estado" class="filtro-label">Estado</label>
                 <select id="filtro-estado" class="filtro-select">
-                    <option value="">Todos</option>
                     <option value="pendiente">Pendiente</option>
                     <option value="completado">Completado</option>
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="filtro-grupo">
+                <label for="filtro-tipo" class="filtro-label">Tipo</label>
+                <select id="filtro-tipo" class="filtro-select">
+                    <option value="">Todos</option>
+                    <option value="equipo">Equipos</option>
+                    <option value="componente">Componentes</option>
                 </select>
             </div>
             <div class="filtro-grupo">
                 <label for="filtro-fecha-desde" class="filtro-label">Fecha Desde</label>
-                <input type="date" id="filtro-fecha-desde" class="filtro-select">
+                <input type="text" id="filtro-fecha-desde" class="filtro-select datepicker" placeholder="DD/MM/AAAA">
             </div>
             <div class="filtro-grupo">
                 <label for="filtro-fecha-hasta" class="filtro-label">Fecha Hasta</label>
-                <input type="date" id="filtro-fecha-hasta" class="filtro-select">
+                <input type="text" id="filtro-fecha-hasta" class="filtro-select datepicker" placeholder="DD/MM/AAAA">
             </div>
             <div class="filtros-actions">
+                <button id="btn-verificar-mantenimientos" class="btn-verificar">
+                    <i class="bi bi-arrow-repeat"></i> Verificar
+                </button>
                 <button id="btn-aplicar-filtros" class="btn-aplicar">
                     <i class="bi bi-funnel"></i> Aplicar
                 </button>
                 <button id="btn-limpiar-filtros" class="btn-limpiar">
                     <i class="bi bi-x"></i> Limpiar
                 </button>
-                <?php if (tienePermiso('mantenimientos.preventivo.crear')): ?>
-                    <button type="button" id="btn-nuevo-mantenimiento" class="btn-nuevo">
-                        <i class="bi bi-plus-circle"></i> Nuevo Mantenimiento
-                    </button>
-                <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <!-- Pestañas de navegación -->
-    <ul class="nav nav-tabs" id="preventivo-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="listado-tab" data-bs-toggle="tab" data-bs-target="#listado" type="button" role="tab" aria-controls="listado" aria-selected="true">
-                <i class="bi bi-list"></i> Listado
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="calendario-tab" data-bs-toggle="tab" data-bs-target="#calendario" type="button" role="tab" aria-controls="calendario" aria-selected="false">
-                <i class="bi bi-calendar3"></i> Calendario
-            </button>
-        </li>
-    </ul>
-
-    <!-- Contenido de las pestañas -->
-    <div class="tab-content" id="preventivo-tabs-content">
-        <!-- Pestaña de Listado -->
-        <div class="tab-pane fade show active" id="listado" role="tabpanel" aria-labelledby="listado-tab">
-            <!-- Layout de dos columnas -->
-            <div class="componentes-layout">
-                <!-- Tabla de mantenimientos -->
-                <div class="componentes-table-container">
-                    <div class="table-container">
-                        <table id="mantenimientos-table" class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th width="50">Tipo</th>
-                                    <th width="100">Código</th>
-                                    <th>Nombre</th>
-                                    <th width="100">Orómetro Prog.</th>
-                                    <th width="100">Orómetro Actual</th>
-                                    <th width="100">Fecha Prog.</th>
-                                    <th width="100">Estado</th>
-                                    <th width="100">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="8" class="text-center">Cargando datos...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Panel de detalles -->
-                <div id="mantenimiento-detalle" class="componentes-detail-container">
-                    <div class="detail-header">
-                        <h2 class="detail-title">Detalles del Mantenimiento</h2>
-                        <p class="detail-subtitle">Seleccione un mantenimiento para ver información</p>
-                    </div>
-                    <div class="detail-content">
-                        <div class="detail-empty">
-                            <div class="detail-empty-icon">
-                                <i class="bi bi-info-circle"></i>
-                            </div>
-                            <div class="detail-empty-text">
-                                Seleccione un mantenimiento para ver sus detalles
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Layout de dos columnas -->
+    <div class="componentes-layout">
+        <!-- Tabla de mantenimientos -->
+        <div class="componentes-table-container">
+            <div class="table-container">
+                <table id="mantenimientos-table" class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Orómetro Actual</th>
+                            <th>Próximo Orómetro</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="8" class="text-center">Cargando datos...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        
-        <!-- Pestaña de Calendario -->
-        <div class="tab-pane fade" id="calendario" role="tabpanel" aria-labelledby="calendario-tab">
-            <div class="card-form mb-2 mt-3">
-                <div class="card-form-header">
-                    <i class="bi bi-calendar3 me-2"></i>Calendario de Mantenimientos Preventivos
-                </div>
-                <div class="card-form-body">
-                    <div id="calendario-mantenimientos"></div>
+
+        <!-- Panel de detalles -->
+        <div id="mantenimiento-detalle" class="componentes-detail-container">
+            <div class="detail-header">
+                <h2 class="detail-title">Detalles del Mantenimiento</h2>
+                <p class="detail-subtitle">Seleccione un mantenimiento para ver información</p>
+            </div>
+            <div class="detail-content">
+                <div class="detail-empty">
+                    <div class="detail-empty-icon">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <div class="detail-empty-text">
+                        Seleccione un mantenimiento para ver sus detalles
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para crear/editar mantenimiento -->
-    <div class="modal fade" id="modal-mantenimiento" tabindex="-1" aria-labelledby="modal-mantenimiento-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <!-- Modal para completar mantenimiento -->
+    <div class="modal fade" id="modal-completar" tabindex="-1" aria-labelledby="modal-completar-titulo" aria-hidden="true">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modal-mantenimiento-titulo">Nuevo Mantenimiento Preventivo</h5>
+                    <h5 class="modal-title" id="modal-completar-titulo">Completar Mantenimiento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="form-mantenimiento" enctype="multipart/form-data">
-                        <input type="hidden" id="mantenimiento-id" name="id">
+                    <form id="form-completar">
+                        <input type="hidden" id="completar-id">
+                        <input type="hidden" id="completar-tipo">
 
-                        <div class="row g-1">
-                            <!-- Columna izquierda -->
-                            <div class="col-md-12">
-                                <!-- Tarjeta de selección de equipo/componente -->
-                                <div class="card-form mb-2">
-                                    <div class="card-form-header">
-                                        <i class="bi bi-gear-fill me-2"></i>Selección de Equipo/Componente
-                                    </div>
-                                    <div class="card-form-body">
-                                        <div class="row g-1">
-                                            <div class="col-md-12">
-                                                <div class="form-group mb-2">
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input" type="radio" name="tipo_seleccion" id="tipo-equipo" value="equipo" checked>
-                                                        <label class="form-check-label" for="tipo-equipo">Equipo</label>
-                                                    </div>
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input" type="radio" name="tipo_seleccion" id="tipo-componente" value="componente">
-                                                        <label class="form-check-label" for="tipo-componente">Componente</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-12" id="contenedor-equipo">
-                                                <div class="form-group mb-2">
-                                                    <label for="mantenimiento-equipo" class="form-label form-label-sm">Equipo <span class="text-danger">*</span></label>
-                                                    <select class="form-select form-select-sm" id="mantenimiento-equipo" name="equipo_id">
-                                                        <option value="">Seleccione...</option>
-                                                        <?php foreach ($equipos as $equipo): ?>
-                                                            <option value="<?php echo $equipo['id']; ?>"><?php echo htmlspecialchars($equipo['codigo'] . ' - ' . $equipo['nombre']); ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-12 d-none" id="contenedor-componente">
-                                                <div class="form-group mb-2">
-                                                    <label for="mantenimiento-componente" class="form-label form-label-sm">Componente <span class="text-danger">*</span></label>
-                                                    <select class="form-select form-select-sm" id="mantenimiento-componente" name="componente_id">
-                                                        <option value="">Seleccione...</option>
-                                                        <?php foreach ($componentes as $componente): ?>
-                                                            <option value="<?php echo $componente['id']; ?>"><?php echo htmlspecialchars($componente['codigo'] . ' - ' . $componente['nombre']); ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Tarjeta de información de mantenimiento -->
-                                <div class="card-form mb-2">
-                                    <div class="card-form-header">
-                                        <i class="bi bi-tools me-2"></i>Información del Mantenimiento
-                                    </div>
-                                    <div class="card-form-body">
-                                        <div class="row g-1">
-                                            <div class="col-md-12">
-                                                <div class="form-group mb-2">
-                                                    <label for="mantenimiento-descripcion" class="form-label form-label-sm">Descripción/Razón <span class="text-danger">*</span></label>
-                                                    <textarea class="form-control form-control-sm" id="mantenimiento-descripcion" name="descripcion_razon" rows="2" required></textarea>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group mb-2">
-                                                    <label for="mantenimiento-orometro" class="form-label form-label-sm">Orómetro Programado <span class="text-danger">*</span></label>
-                                                    <div class="input-group input-group-sm">
-                                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="mantenimiento-orometro" name="orometro_programado" required>
-                                                        <span class="input-group-text unidad-orometro">hrs</span>
-                                                    </div>
-                                                    <small class="text-muted">Orómetro actual: <span id="orometro-actual">0</span> <span class="unidad-orometro">hrs</span></small>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group mb-2">
-                                                    <label for="mantenimiento-fecha" class="form-label form-label-sm">Fecha Programada (opcional)</label>
-                                                    <input type="datetime-local" class="form-control form-control-sm" id="mantenimiento-fecha" name="fecha_hora_programada">
-                                                    <small class="text-muted">Si no se especifica, se calculará automáticamente.</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Tarjeta de observaciones -->
-                                <div class="card-form mb-2">
-                                    <div class="card-form-header">
-                                        <i class="bi bi-chat-left-text me-2"></i>Observaciones
-                                    </div>
-                                    <div class="card-form-body">
-                                        <div class="form-group">
-                                            <textarea class="form-control form-control-sm" id="mantenimiento-observaciones" name="observaciones" rows="2" placeholder="Ingrese observaciones adicionales sobre el mantenimiento..."></textarea>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="mb-3">
+                            <label for="completar-orometro-actual" class="form-label">Orómetro Actual</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="completar-orometro-actual" step="0.01" min="0" required>
+                                <span class="input-group-text" id="completar-unidad-orometro">hrs</span>
                             </div>
+                            <div class="form-text">Ingrese el valor actual del orómetro al momento de realizar el mantenimiento.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="completar-observaciones" class="form-label">Observaciones</label>
+                            <textarea class="form-control" id="completar-observaciones" rows="3"></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="btn-guardar-mantenimiento" class="btn btn-sm btn-primary">Guardar</button>
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para ver detalles del mantenimiento -->
-    <div class="modal fade" id="modal-detalle-mantenimiento" tabindex="-1" aria-labelledby="modal-detalle-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modal-detalle-titulo">Detalles del Mantenimiento Preventivo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-1">
-                        <!-- Información del mantenimiento -->
-                        <div class="col-md-3 text-center mb-2">
-                            <div class="componente-imagen-container">
-                                <img id="detalle-imagen" src="<?php echo $baseUrl; ?>assets/img/equipos/default.png" alt="Imagen del equipo/componente" class="img-fluid rounded mb-1">
-                                <button type="button" id="btn-ver-imagen" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-search-plus me-1"></i> Ampliar
-                                </button>
-                            </div>
-                            <div class="mt-1">
-                                <span id="detalle-estado" class="badge rounded-pill bg-success">Pendiente</span>
-                            </div>
-                            <!-- Tiempo restante para mantenimiento -->
-                            <div id="detalle-tiempo-restante" class="mt-1"></div>
-                        </div>
-                        <div class="col-md-9">
-                            <h4 id="detalle-nombre" class="fs-5 mb-2">Nombre del Equipo/Componente</h4>
-                            <!-- Tarjetas de información -->
-                            <div class="detalle-card mb-2">
-                                <div class="detalle-card-header">
-                                    <i class="bi bi-info-circle me-2"></i>Información Básica
-                                </div>
-                                <div class="detalle-card-body">
-                                    <div class="row g-1">
-                                        <div class="col-md-4">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Código:</span>
-                                                <span id="detalle-codigo" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Tipo:</span>
-                                                <span id="detalle-tipo" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Tipo Orómetro:</span>
-                                                <span id="detalle-tipo-orometro" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="detalle-card mb-2">
-                                <div class="detalle-card-header">
-                                    <i class="bi bi-tools me-2"></i>Información del Mantenimiento
-                                </div>
-                                <div class="detalle-card-body">
-                                    <div class="row g-1">
-                                        <div class="col-md-6">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Orómetro Programado:</span>
-                                                <span id="detalle-orometro-programado" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Orómetro Actual:</span>
-                                                <span id="detalle-orometro-actual" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Fecha Programada:</span>
-                                                <span id="detalle-fecha-programada" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="detalle-item">
-                                                <span class="detalle-label">Fecha Realizado:</span>
-                                                <span id="detalle-fecha-realizado" class="detalle-valor">-</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="detalle-card mb-2">
-                                <div class="detalle-card-header">
-                                    <i class="bi bi-chat-left-text me-2"></i>Descripción y Observaciones
-                                </div>
-                                <div class="detalle-card-body">
-                                    <div class="detalle-item mb-2">
-                                        <span class="detalle-label">Descripción/Razón:</span>
-                                        <p id="detalle-descripcion" class="detalle-valor mb-0">-</p>
-                                    </div>
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Observaciones:</span>
-                                        <p id="detalle-observaciones" class="detalle-valor mb-0">-</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Formulario para completar mantenimiento -->
-                    <div id="contenedor-completar" class="mt-3 d-none">
-                        <div class="card-form">
-                            <div class="card-form-header">
-                                <i class="bi bi-check-circle me-2"></i>Completar Mantenimiento
-                            </div>
-                            <div class="card-form-body">
-                                <form id="form-completar">
-                                    <input type="hidden" id="completar-id" name="id">
-                                    <div class="form-group">
-                                        <label for="completar-observaciones" class="form-label form-label-sm">Observaciones:</label>
-                                        <textarea class="form-control form-control-sm" id="completar-observaciones" name="observaciones" rows="3" placeholder="Ingrese observaciones sobre el mantenimiento realizado..."></textarea>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <?php if (tienePermiso('mantenimientos.preventivo.editar')): ?>
-                        <button type="button" id="btn-editar-desde-detalle" class="btn btn-sm btn-primary">
-                            <i class="bi bi-pencil me-1"></i> Editar
-                        </button>
-                    <?php endif; ?>
-                    <?php if (tienePermiso('mantenimientos.preventivo.completar')): ?>
-                        <button type="button" id="btn-completar-mantenimiento" class="btn btn-sm btn-success">
-                            <i class="bi bi-check-circle me-1"></i> Completar
-                        </button>
-                        <button type="button" id="btn-guardar-completar" class="btn btn-sm btn-success d-none">
-                            <i class="bi bi-save me-1"></i> Guardar Completado
-                        </button>
-                    <?php endif; ?>
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de confirmación para completar -->
-    <div class="modal fade" id="modal-confirmar-completar" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-check-circle-fill me-2"></i>Confirmar Completado
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body text-center p-4">
-                    <div class="mb-4">
-                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                    </div>
-                    <h4 class="mb-3">¿Está seguro que desea marcar este mantenimiento como completado?</h4>
-                    <p class="text-muted mb-0">Esta acción registrará el mantenimiento como completado y actualizará el historial.</p>
-                    <div class="alert alert-warning mt-3">
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                        <strong>Nota:</strong> Esta acción no se puede deshacer.
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-center">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-2"></i>Cancelar
-                    </button>
-                    <button type="button" id="btn-confirmar-completar" class="btn btn-success">
-                        <i class="bi bi-check-circle me-2"></i>Confirmar Completado
-                    </button>
+                    <button type="button" id="btn-guardar-completar" class="btn btn-success">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 </div>
             </div>
         </div>

@@ -6,10 +6,9 @@
 // Variables globales
 let mantenimientosTable;
 let mantenimientoSeleccionado = null;
-let mantenimientoActual = null;
-let filtrosAplicados = {};
-let imageUploader;
-let calendario;
+let filtrosAplicados = {
+  estado: "pendiente", // Por defecto mostrar solo pendientes
+};
 
 // Constantes
 const UNIDADES_OROMETRO = {
@@ -19,10 +18,8 @@ const UNIDADES_OROMETRO = {
 
 // Declaración de variables globales
 const $ = jQuery;
-const bootstrap = window.bootstrap; // Asegúrate de que Bootstrap esté disponible globalmente
+const bootstrap = window.bootstrap;
 // Verificar si las variables ya están definidas en el objeto window
-// Si no están definidas, no intentamos redeclararlas
-// Esto evita tanto el error de "no disponible" como el de "ya declarado"
 if (!window.showErrorToast)
   window.showErrorToast = (msg) => {
     console.error(msg);
@@ -31,77 +28,242 @@ if (!window.showSuccessToast)
   window.showSuccessToast = (msg) => {
     console.log(msg);
   };
-if (!window.imageViewer)
-  window.imageViewer = {
-    show: () => {
-      console.log("Visor de imágenes no disponible");
-    },
-  };
-if (!window.ImageUpload)
-  window.ImageUpload = () => {
-    console.log("Componente de carga de imágenes no disponible");
+if (!window.showInfoToast)
+  window.showInfoToast = (msg) => {
+    console.log(msg);
   };
 if (!window.showLoading) window.showLoading = () => {};
 if (!window.hideLoading) window.hideLoading = () => {};
 
 // Inicialización cuando el DOM está listo
 $(document).ready(function () {
-  // Inicializar DataTable
-  inicializarTabla();
+  // Inicializar datepickers
+  inicializarDatepickers();
 
-  // Inicializar validación del formulario
-  inicializarValidacionFormulario();
+  // Verificar mantenimientos preventivos al cargar la página
+  verificarMantenimientosPreventivos();
 
-  // Inicializar calendario si estamos en la pestaña de calendario
-  if ($("#calendario-mantenimientos").length > 0) {
-    inicializarCalendario();
-  }
-
-  // Eventos para botones y controles
-  $("#btn-nuevo-mantenimiento").on("click", mostrarModalNuevoMantenimiento);
-  $("#btn-guardar-mantenimiento").on("click", guardarMantenimiento);
-  $("#btn-aplicar-filtros").on("click", aplicarFiltros);
-  $("#btn-limpiar-filtros").on("click", limpiarFiltros);
-  $("#btn-ver-imagen").on("click", ampliarImagenDetalle);
-  $("#btn-editar-desde-detalle").on("click", editarDesdeDetalle);
-  $("#btn-completar-mantenimiento").on("click", mostrarFormularioCompletar);
-  $("#btn-guardar-completar").on("click", guardarCompletarMantenimiento);
-  $("#btn-confirmar-completar").on("click", completarMantenimientoConfirmado);
-
-  // Eventos para campos de formulario
-  $("#tipo-equipo, #tipo-componente").on("change", cambiarTipoSeleccion);
-  $("#mantenimiento-equipo").on("change", cargarDatosEquipo);
-  $("#mantenimiento-componente").on("change", cargarDatosComponente);
-
-  // Eventos para pestañas
-  $('#preventivo-tabs a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
-    if (e.target.id === 'calendario-tab') {
-      if (calendario) {
-        calendario.render();
-      } else {
-        inicializarCalendario();
-      }
-    }
-  });
-
-  // Inicializar tooltips
-  $('[data-bs-toggle="tooltip"]').tooltip();
+  // Configurar eventos
+  configurarEventos();
 });
 
-// Función para obtener la URL base
-function getBaseUrl() {
-  return window.location.pathname.split("/modulos/")[0] + "/";
-}
-
-// Función para construir URL completa
-function getUrl(path) {
-  return getBaseUrl() + path;
+/**
+ * Inicializa los datepickers
+ */
+function inicializarDatepickers() {
+  try {
+    const datepickers = document.querySelectorAll(".datepicker");
+    datepickers.forEach(function (el) {
+      new Datepicker(el, {
+        language: "es",
+        format: "dd/mm/yyyy",
+        autohide: true,
+      });
+    });
+  } catch (error) {
+    console.error("Error al inicializar datepickers:", error);
+  }
 }
 
 /**
- * Inicializa la tabla de mantenimientos con DataTables
+ * Configura los eventos de la página
+ */
+function configurarEventos() {
+  // Botón para verificar mantenimientos
+  $("#btn-verificar-mantenimientos").on("click", function () {
+    verificarMantenimientosPreventivos();
+  });
+
+  // Botón para aplicar filtros
+  $("#btn-aplicar-filtros").on("click", function () {
+    aplicarFiltros();
+  });
+
+  // Botón para limpiar filtros
+  $("#btn-limpiar-filtros").on("click", function () {
+    limpiarFiltros();
+  });
+
+  // Botón para completar mantenimiento
+  $("#btn-guardar-completar").on("click", function () {
+    guardarCompletarMantenimiento();
+  });
+
+  // Botón para crear registros faltantes
+  $("#btn-crear-faltantes").on("click", function () {
+    crearRegistrosFaltantes();
+  });
+
+  // Botón para ignorar faltantes
+  $("#btn-ignorar-faltantes").on("click", function () {
+    $("#verificacion-resultados").slideUp();
+  });
+}
+
+/**
+ * Verifica y genera mantenimientos preventivos si es necesario
+ */
+function verificarMantenimientosPreventivos() {
+  // Mostrar indicador de carga
+  mostrarCargando();
+
+  // Mostrar mensaje de verificación
+  $("#verificacion-container").show();
+  $("#verificacion-resultados").hide();
+  $("#todo-actualizado").hide();
+
+  // Verificar mantenimientos faltantes
+  $.ajax({
+    url: getUrl("api/mantenimiento/preventivo/generar.php"),
+    type: "GET",
+    dataType: "json",
+    success: function (response) {
+      if (response.success) {
+        const equiposFaltantes = response.equipos_faltantes || 0;
+        const componentesFaltantes = response.componentes_faltantes || 0;
+        const totalFaltantes = equiposFaltantes + componentesFaltantes;
+
+        // Ocultar contenedor de verificación
+        $("#verificacion-container").hide();
+
+        if (totalFaltantes > 0) {
+          // Mostrar mensaje de faltantes
+          let mensaje = `Se encontraron ${totalFaltantes} registros sin mantenimientos preventivos programados`;
+          if (equiposFaltantes > 0 && componentesFaltantes > 0) {
+            mensaje += ` (${equiposFaltantes} equipos y ${componentesFaltantes} componentes)`;
+          } else if (equiposFaltantes > 0) {
+            mensaje += ` (${equiposFaltantes} equipos)`;
+          } else {
+            mensaje += ` (${componentesFaltantes} componentes)`;
+          }
+          mensaje += ".";
+
+          $("#verificacion-mensaje").text(mensaje);
+          $("#verificacion-resultados").slideDown();
+        } else {
+          // Mostrar mensaje de todo actualizado
+          $("#todo-actualizado").slideDown();
+          setTimeout(function () {
+            $("#todo-actualizado").slideUp();
+          }, 5000); // Ocultar después de 5 segundos
+        }
+
+        // Inicializar tabla
+        inicializarTabla();
+      } else {
+        mostrarToast(
+          "error",
+          "Error",
+          response.message || "Error al verificar mantenimientos preventivos"
+        );
+        // Inicializar tabla de todos modos para mostrar datos existentes
+        inicializarTabla();
+        $("#verificacion-container").hide();
+      }
+    },
+    error: function (xhr, status, error) {
+      console.error("Error en la solicitud AJAX:", xhr.responseText);
+
+      // Mostrar mensaje de error
+      mostrarToast(
+        "error",
+        "Error",
+        "No se pudo verificar los mantenimientos preventivos"
+      );
+
+      // Inicializar tabla de todos modos para mostrar datos existentes
+      inicializarTabla();
+      $("#verificacion-container").hide();
+    },
+    complete: function () {
+      // Ocultar indicador de carga
+      ocultarCargando();
+    },
+  });
+}
+
+/**
+ * Crea los registros de mantenimiento faltantes
+ */
+function crearRegistrosFaltantes() {
+  // Mostrar indicador de carga
+  mostrarCargando();
+
+  // Mostrar mensaje de verificación
+  $("#verificacion-resultados").hide();
+  $("#verificacion-container").show();
+
+  $.ajax({
+    url: getUrl("api/mantenimiento/preventivo/generar.php"),
+    type: "POST",
+    dataType: "json",
+    success: function (response) {
+      if (response.success) {
+        const totalGenerados = response.total_generados || 0;
+
+        if (totalGenerados > 0) {
+          mostrarToast(
+            "success",
+            "Mantenimientos Generados",
+            `Se han generado ${totalGenerados} nuevos mantenimientos preventivos (${response.equipos_generados} equipos, ${response.componentes_generados} componentes)`
+          );
+
+          // Verificar nuevamente para asegurarse de que todo esté completo
+          verificarMantenimientosPreventivos();
+        } else {
+          mostrarToast(
+            "info",
+            "Información",
+            "No se requiere generar nuevos mantenimientos preventivos"
+          );
+          $("#verificacion-container").hide();
+
+          // Mostrar mensaje de todo actualizado
+          $("#todo-actualizado").slideDown();
+          setTimeout(function () {
+            $("#todo-actualizado").slideUp();
+          }, 5000); // Ocultar después de 5 segundos
+        }
+
+        // Recargar tabla
+        mantenimientosTable.ajax.reload();
+      } else {
+        mostrarToast(
+          "error",
+          "Error",
+          response.message || "Error al generar mantenimientos preventivos"
+        );
+        $("#verificacion-container").hide();
+      }
+    },
+    error: function (xhr, status, error) {
+      console.error("Error en la solicitud AJAX:", xhr.responseText);
+
+      mostrarToast(
+        "error",
+        "Error",
+        "Error al generar mantenimientos preventivos"
+      );
+
+      $("#verificacion-container").hide();
+    },
+    complete: function () {
+      // Ocultar indicador de carga
+      ocultarCargando();
+    },
+  });
+}
+
+/**
+ * Inicializa la tabla de mantenimientos
  */
 function inicializarTabla() {
+  // Destruir tabla si ya existe
+  if (mantenimientosTable) {
+    mantenimientosTable.destroy();
+  }
+
+  // Inicializar DataTable
   mantenimientosTable = $("#mantenimientos-table").DataTable({
     processing: true,
     serverSide: true,
@@ -109,7 +271,7 @@ function inicializarTabla() {
     ajax: {
       url: getUrl("api/mantenimiento/preventivo/listar.php"),
       type: "POST",
-      data: (d) => {
+      data: function (d) {
         // Si se selecciona "Todos", usar un valor grande pero finito en lugar de -1
         if (d.length == -1) {
           d.length = 10000; // Un número grande pero manejable
@@ -121,7 +283,7 @@ function inicializarTabla() {
           ...filtrosAplicados,
         };
       },
-      error: (xhr, error, thrown) => {
+      error: function (xhr, error, thrown) {
         console.error(
           "Error en la solicitud AJAX de DataTable:",
           error,
@@ -136,135 +298,75 @@ function inicializarTabla() {
     },
     columns: [
       {
+        data: "fecha_formateada",
+        render: function (data, type, row) {
+          if (type === "display") {
+            let html = data;
+            if (row.dias_restantes !== null) {
+              const diasTexto =
+                row.dias_restantes >= 0
+                  ? `Faltan ${row.dias_restantes} días`
+                  : `Hace ${Math.abs(row.dias_restantes)} días`;
+
+              html += `<br><small class="${row.dias_restantes_clase}">${diasTexto}</small>`;
+            }
+            return html;
+          }
+          return data;
+        },
+      },
+      {
+        data: "tipo",
+        render: function (data, type, row) {
+          if (type === "display") {
+            return data === "equipo" ? "Equipo" : "Componente";
+          }
+          return data;
+        },
+      },
+      { data: "codigo_equipo" },
+      { data: "nombre_equipo" },
+      {
+        data: "orometro_actual",
+        render: function (data, type, row) {
+          if (type === "display") {
+            return `
+                            <div>${data}</div>
+                            <div class="progress mt-1" style="height: 4px;">
+                                <div class="progress-bar ${row.progreso_clase}" role="progressbar" 
+                                    style="width: ${row.progreso}%" 
+                                    aria-valuenow="${row.progreso}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100">
+                                </div>
+                            </div>
+                        `;
+          }
+          return data;
+        },
+      },
+      { data: "proximo_orometro" },
+      {
+        data: "estado",
+        render: function (data, type, row) {
+          if (type === "display") {
+            return `<span class="estado-badge estado-${data.toLowerCase()}">${capitalizarPrimeraLetra(
+              data
+            )}</span>`;
+          }
+          return data;
+        },
+      },
+      {
         data: null,
         orderable: false,
         className: "text-center",
         render: function (data, type, row) {
-          let icono = '<i class="bi bi-gear-fill text-primary"></i>';
-          if (row.componente_id) {
-            icono = '<i class="bi bi-tools text-warning"></i>';
-          }
-          return icono;
-        },
-      },
-      {
-        data: "codigo",
-        className: "align-middle",
-        render: function (data, type, row) {
-          return row.componente_id ? row.componente_codigo : row.equipo_codigo;
-        }
-      },
-      {
-        data: "nombre",
-        className: "align-middle",
-        render: function (data, type, row) {
-          return row.componente_id ? row.componente_nombre : row.equipo_nombre;
-        }
-      },
-      {
-        data: "orometro_programado",
-        className: "align-middle text-center",
-        render: function (data, type, row) {
-          // Para ordenamiento, devolver el valor numérico
-          if (type === "sort" || type === "type") {
-            return Number.parseFloat(data || 0);
-          }
-          const unidad = getUnidadOrometro(row.tipo_orometro);
-          return `<span class="orometro-valor">${formatearNumero(
-            data || 0
-          )} ${unidad}</span>`;
-        },
-      },
-      {
-        data: "orometro_actual",
-        className: "align-middle text-center",
-        render: function (data, type, row) {
-          // Para ordenamiento, devolver el valor numérico
-          if (type === "sort" || type === "type") {
-            return Number.parseFloat(data || 0);
-          }
-
-          // Calcular el progreso para la barra
-          const programado = Number.parseFloat(row.orometro_programado || 0);
-          const actual = Number.parseFloat(data || 0);
-          const unidad = getUnidadOrometro(row.tipo_orometro);
-
-          let porcentaje = 0;
-          let colorClass = "bg-success";
-          let textColorClass = "text-success";
-
-          if (programado > 0) {
-            // Calcular el porcentaje de avance
-            porcentaje = Math.min(Math.max((actual / programado) * 100, 0), 100);
-
-            // Determinar el color según la proximidad al mantenimiento programado
-            if (actual >= programado) {
-              colorClass = "bg-danger";
-              textColorClass = "text-danger";
-            } else if (actual >= programado * 0.9) {
-              colorClass = "bg-warning";
-              textColorClass = "text-warning";
-            }
-          }
-
-          // Construir la barra de progreso
-          const progressBar = `
-            <div class="progress mt-1" style="height: 4px;">
-              <div class="progress-bar ${colorClass}" role="progressbar" 
-                style="width: ${porcentaje}%" 
-                aria-valuenow="${porcentaje}" 
-                aria-valuemin="0" 
-                aria-valuemax="100"></div>
-            </div>
-          `;
-
-          return `
-            <div>
-              <span class="orometro-valor ${textColorClass} fw-bold">${formatearNumero(
-                data || 0
-              )} ${unidad}</span>
-              ${progressBar}
-            </div>
-          `;
-        },
-      },
-      {
-        data: "fecha_hora_programada",
-        className: "align-middle text-center",
-        render: function (data, type, row) {
-          if (type === "sort" || type === "type") {
-            return data ? new Date(data).getTime() : 0;
-          }
-          return data ? formatearFecha(data) : "-";
-        },
-      },
-      {
-        data: "estado",
-        className: "align-middle text-center",
-        render: function (data, type) {
-          // Para ordenamiento, devolver el valor sin formato
-          if (type === "sort" || type === "type") {
-            return data;
-          }
-          return `<span class="estado-badge estado-${data.toLowerCase()}">${capitalizarPrimeraLetra(
-            data
-          )}</span>`;
-        },
-      },
-      {
-        data: null,
-        orderable: false,
-        className: "text-center align-middle",
-        render: function (data) {
           let acciones = '<div class="btn-group btn-group-sm">';
-          acciones += `<button type="button" class="btn-accion btn-ver-mantenimiento" data-id="${data.id}" title="Ver detalles"><i class="bi bi-eye"></i></button>`;
+          acciones += `<button type="button" class="btn-accion btn-ver-mantenimiento" data-id="${row.id}" title="Ver detalles"><i class="bi bi-eye"></i></button>`;
 
-          if (tienePermiso("mantenimientos.preventivo.editar") && data.estado !== "completado") {
-            acciones += `<button type="button" class="btn-accion btn-editar-mantenimiento" data-id="${data.id}" title="Editar"><i class="bi bi-pencil"></i></button>`;
-          }
-
-          if (tienePermiso("mantenimientos.preventivo.completar") && data.estado !== "completado") {
-            acciones += `<button type="button" class="btn-accion btn-completar-mantenimiento" data-id="${data.id}" title="Completar"><i class="bi bi-check-circle"></i></button>`;
+          if (row.estado === "pendiente") {
+            acciones += `<button type="button" class="btn-accion btn-completar-mantenimiento" data-id="${row.id}" title="Completar mantenimiento"><i class="bi bi-check-lg"></i></button>`;
           }
 
           acciones += "</div>";
@@ -272,6 +374,7 @@ function inicializarTabla() {
         },
       },
     ],
+    order: [[0, "asc"]], // Ordenar por fecha por defecto
     dom: '<"row"<"col-md-6"B><"col-md-6"f>>rt<"row"<"col-md-6"l><"col-md-6"p>>',
     buttons: [
       {
@@ -279,7 +382,7 @@ function inicializarTabla() {
         text: '<i class="bi bi-clipboard"></i> Copiar',
         className: "btn btn-sm",
         exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
+          columns: [0, 1, 2, 3, 4, 5, 6],
         },
       },
       {
@@ -287,7 +390,7 @@ function inicializarTabla() {
         text: '<i class="bi bi-file-earmark-excel"></i> Excel',
         className: "btn btn-sm",
         exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
+          columns: [0, 1, 2, 3, 4, 5, 6],
         },
       },
       {
@@ -295,212 +398,47 @@ function inicializarTabla() {
         text: '<i class="bi bi-file-earmark-pdf"></i> PDF',
         className: "btn btn-sm btn-primary",
         exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
+          columns: [0, 1, 2, 3, 4, 5, 6],
         },
         customize: function (doc) {
-          // Configuración básica del documento
+          // Personalizar el PDF
           doc.pageOrientation = "landscape";
           doc.defaultStyle = {
             fontSize: 8,
             color: "#333333",
           };
-          
-          // Definir colores pastel con sus versiones oscuras para texto
-          const colores = {
-            // Colores pastel para fondos
-            azulPastel: "#D4E6F1",
-            verdePastel: "#D5F5E3",
-            naranjaPastel: "#FAE5D3",
-            rojoPastel: "#F5B7B1",
-            grisPastel: "#EAECEE",
-            celestePastel: "#EBF5FB",
-            
-            // Colores oscuros para texto
-            azulOscuro: "#1A5276",
-            verdeOscuro: "#186A3B",
-            naranjaOscuro: "#BA4A00",
-            rojoOscuro: "#922B21",
-            grisOscuro: "#424949",
-            celesteOscuro: "#2874A6",
-            
-            // Color primario azul
-            azulPrimario: "#0055A4"
-          };
-          
-          // Logo en base64
-          const logoBase64 = "data:image/png;base64,...";
-          
-          // Encabezado con logos a ambos lados
-          doc.content.unshift(
-            {
-              columns: [
-                {
-                  // Logo izquierdo
-                  image: logoBase64,
-                  width: 50,
-                  margin: [5, 5, 0, 5],
-                },
-                {
-                  // Título central
-                  text: 'REPORTE DE MANTENIMIENTOS PREVENTIVOS',
-                  style: 'header',
-                  alignment: 'center',
-                  margin: [0, 15, 0, 0],
-                },
-                {
-                  // Logo derecho
-                  image: logoBase64,
-                  width: 50,
-                  alignment: 'right',
-                  margin: [0, 5, 5, 5],
-                }
-              ],
-              columnGap: 10
-            },
-            {
-              columns: [
-                {
-                  text: 'Empresa: VOL COMPANY SAC - Empresa Minera',
-                  style: 'empresa',
-                  margin: [5, 0, 0, 5],
-                },
-                {
-                  text: `Fecha: ${new Date().toLocaleDateString('es-ES')}`,
-                  style: 'empresa',
-                  alignment: 'right',
-                  margin: [0, 0, 5, 5],
-                }
-              ]
-            }
-          );
-      
-          // Encontrar la tabla dinámicamente
-          let tableIndex = doc.content.findIndex((item) => item.table);
-          if (tableIndex !== -1) {
-            // Configurar anchos de columnas proporcionales
-            doc.content[tableIndex].table.widths = [
-              40, // Código
-              '*', // Nombre
-              60, // Orómetro Prog.
-              60, // Orómetro Actual
-              80, // Fecha Prog.
-              60, // Estado
-            ];
-            
-            // Estilizar la tabla
-            doc.content[tableIndex].table.body.forEach((row, i) => {
-              if (i === 0) {
-                // Encabezado
-                row.forEach((cell) => {
-                  cell.fillColor = colores.azulPastel;
-                  cell.color = colores.azulOscuro;
-                  cell.fontSize = 9;
-                  cell.bold = true;
-                  cell.alignment = "center";
-                  cell.margin = [2, 3, 2, 3];
-                });
-              } else {
-                // Filas de datos
-                const estado = row[5].text.toString().toLowerCase(); // Columna 'estado' (índice 5 para mantenimientos)
-                
-                // Determinar color según estado (usando colores pastel)
-                let colorFondo = colores.azulPastel;
-                let colorTexto = colores.azulOscuro;
-                
-                if (estado.includes("pendiente")) {
-                  colorFondo = colores.naranjaPastel;
-                  colorTexto = colores.naranjaOscuro;
-                } else if (estado.includes("completado")) {
-                  colorFondo = colores.verdePastel;
-                  colorTexto = colores.verdeOscuro;
-                }
-                
-                // Aplicar estilos a cada celda
-                row.forEach((cell, j) => {
-                  cell.fontSize = 8;
-                  cell.margin = [2, 2, 2, 2];
-                  
-                  // Alineación según tipo de dato
-                  if (j === 1) { // Nombre
-                    cell.alignment = "left";
-                  } else if (j === 5) { // Estado
-                    cell.fillColor = colorFondo;
-                    cell.color = colorTexto;
-                    cell.alignment = "center";
-                    cell.bold = true;
-                  } else if (j >= 2 && j <= 4) { // Datos numéricos y fecha
-                    cell.alignment = "center";
-                  } else {
-                    cell.alignment = "center";
-                  }
-                });
-                
-                // Añadir líneas zebra para mejor legibilidad
-                if (i % 2 === 0) {
-                  row.forEach((cell, j) => {
-                    if (j !== 5 && !cell.fillColor) { // No sobrescribir el color de estado
-                      cell.fillColor = "#f9f9f9";
-                    }
-                  });
-                }
-              }
-            });
-          }
-      
-          // Añadir pie de página simplificado
-          doc.footer = function (currentPage, pageCount) {
-            return {
-              text: `Página ${currentPage} de ${pageCount}`,
-              alignment: 'center',
-              fontSize: 8,
-              margin: [0, 0, 0, 0]
-            };
-          };
-          
-          // Añadir texto de firmas
-          doc.content.push(
-            {
-              columns: [
-                {
-                  text: 'JEFE DE MANTENIMIENTO',
-                  alignment: 'center',
-                  fontSize: 8,
-                  margin: [0, 60, 0, 0]
-                }
-              ]
-            }
-          );
-      
-          // Definir estilos
+
+          // Título del documento
+          doc.content.unshift({
+            text: "Reporte de Mantenimientos Preventivos",
+            style: "header",
+            alignment: "center",
+            margin: [0, 10, 0, 10],
+          });
+
+          // Estilos
           doc.styles = {
             header: {
               fontSize: 14,
               bold: true,
-              color: colores.azulPrimario
+              color: "#0055A4",
             },
-            empresa: {
-              fontSize: 9,
-              color: colores.azulOscuro,
-              bold: true
-            }
           };
-      
-          // Metadatos del PDF
+
+          // Metadatos
           doc.info = {
             title: "Reporte de Mantenimientos Preventivos",
-            author: "VOL COMPANY SAC",
-            subject: "Listado de Mantenimientos Preventivos",
+            author: "SIGESMAN",
+            subject: "Mantenimientos Preventivos",
           };
         },
-        filename: 'Reporte_Mantenimientos_Preventivos_' + new Date().toISOString().split('T')[0],
-        orientation: 'landscape',
       },
       {
         extend: "print",
         text: '<i class="bi bi-printer"></i> Imprimir',
         className: "btn btn-sm",
         exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
+          columns: [0, 1, 2, 3, 4, 5, 6],
         },
       },
     ],
@@ -518,17 +456,12 @@ function inicializarTabla() {
     pageLength: 25,
     initComplete: function () {
       // Eventos para botones de acción
-      $("#mantenimientos-table").on("click", ".btn-ver-mantenimiento", function () {
-        const id = $(this).data("id");
-        verDetallesMantenimiento(id);
-      });
-
       $("#mantenimientos-table").on(
         "click",
-        ".btn-editar-mantenimiento",
+        ".btn-ver-mantenimiento",
         function () {
           const id = $(this).data("id");
-          editarMantenimiento(id);
+          cargarDetallesMantenimiento(id);
         }
       );
 
@@ -537,7 +470,7 @@ function inicializarTabla() {
         ".btn-completar-mantenimiento",
         function () {
           const id = $(this).data("id");
-          completarMantenimiento(id);
+          abrirModalCompletar(id);
         }
       );
 
@@ -557,659 +490,25 @@ function inicializarTabla() {
           setTimeout(() => {
             cargarDetallesMantenimiento(data.id);
             // Quitar clase de carga y añadir clase de cargado para la animación
-            $("#mantenimiento-detalle").removeClass("loading").addClass("loaded");
+            $("#mantenimiento-detalle")
+              .removeClass("loading")
+              .addClass("loaded");
           }, 300);
         }
       });
     },
-    // Manejar el error de "Todos" registros
-    drawCallback: () => {
-      if (window.hideLoading) {
-        window.hideLoading();
-      }
+    drawCallback: function () {
+      ocultarCargando();
     },
-    preDrawCallback: () => {
-      if (window.showLoading) {
-        window.showLoading();
-      }
-    },
-  });
-}
-
-/**
- * Inicializa la validación del formulario de mantenimientos
- */
-function inicializarValidacionFormulario() {
-  $("#form-mantenimiento").validate({
-    rules: {
-      equipo_id: {
-        required: function() {
-          return $("#tipo-equipo").is(":checked");
-        }
-      },
-      componente_id: {
-        required: function() {
-          return $("#tipo-componente").is(":checked");
-        }
-      },
-      descripcion_razon: {
-        required: true,
-        minlength: 3,
-        maxlength: 500,
-      },
-      orometro_programado: {
-        required: true,
-        number: true,
-        min: 0,
-      }
-    },
-    messages: {
-      equipo_id: {
-        required: "Debe seleccionar un equipo",
-      },
-      componente_id: {
-        required: "Debe seleccionar un componente",
-      },
-      descripcion_razon: {
-        required: "La descripción es obligatoria",
-        minlength: "La descripción debe tener al menos 3 caracteres",
-        maxlength: "La descripción no puede tener más de 500 caracteres",
-      },
-      orometro_programado: {
-        required: "El orómetro programado es obligatorio",
-        number: "Debe ingresar un número válido",
-        min: "El valor debe ser mayor o igual a 0",
-      }
-    },
-    errorElement: "span",
-    errorPlacement: function (error, element) {
-      error.addClass("invalid-feedback");
-      element.closest(".form-group").append(error);
-    },
-    highlight: function (element, errorClass, validClass) {
-      $(element).addClass("is-invalid");
-    },
-    unhighlight: function (element, errorClass, validClass) {
-      $(element).removeClass("is-invalid");
-    },
-  });
-}
-
-/**
- * Inicializa el calendario de mantenimientos
- */
-function inicializarCalendario() {
-  const calendarEl = document.getElementById('calendario-mantenimientos');
-  
-  if (!calendarEl) return;
-  
-  calendario = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
-    locale: 'es',
-    buttonText: {
-      today: 'Hoy',
-      month: 'Mes',
-      week: 'Semana',
-      day: 'Día'
-    },
-    events: function(info, successCallback, failureCallback) {
-      // Obtener eventos del servidor
-      $.ajax({
-        url: getUrl("api/mantenimiento/preventivo/calendario.php"),
-        type: 'GET',
-        data: {
-          start: info.startStr,
-          end: info.endStr,
-          ...filtrosAplicados
-        },
-        success: function(response) {
-          if (response.success) {
-            const eventos = response.data.map(evento => {
-              // Determinar color según estado
-              let backgroundColor = '#4361ee'; // Pendiente
-              let borderColor = '#4361ee';
-              let textColor = '#ffffff';
-              let classNames = [];
-              
-              if (evento.estado === 'completado') {
-                backgroundColor = '#c8c8c8';
-                borderColor = '#c8c8c8';
-                textColor = '#333333';
-                classNames.push('evento-completado');
-              } else if (evento.vencido) {
-                backgroundColor = '#ff6b6b';
-                borderColor = '#ff6b6b';
-                classNames.push('evento-vencido');
-              }
-              
-              // Si es una fecha estimada (no programada explícitamente)
-              if (evento.estimado) {
-                classNames.push('evento-estimado');
-              }
-              
-              return {
-                id: evento.id,
-                title: evento.title,
-                start: evento.start,
-                end: evento.end,
-                backgroundColor: backgroundColor,
-                borderColor: borderColor,
-                textColor: textColor,
-                classNames: classNames,
-                extendedProps: {
-                  id: evento.id,
-                  descripcion: evento.descripcion,
-                  estado: evento.estado,
-                  tipo: evento.tipo,
-                  equipo_id: evento.equipo_id,
-                  componente_id: evento.componente_id
-                }
-              };
-            });
-            
-            successCallback(eventos);
-          } else {
-            failureCallback(response.message);
-            if (window.showErrorToast) {
-              window.showErrorToast(response.message || "Error al cargar eventos del calendario");
-            }
-          }
-        },
-        error: function(xhr, status, error) {
-          failureCallback(error);
-          if (window.showErrorToast) {
-            window.showErrorToast("Error de conexión al cargar el calendario");
-          }
-        }
-      });
-    },
-    eventClick: function(info) {
-      // Mostrar detalles del mantenimiento al hacer clic en un evento
-      verDetallesMantenimiento(info.event.extendedProps.id);
-    },
-    eventDidMount: function(info) {
-      // Agregar tooltip con información del evento
-      $(info.el).tooltip({
-        title: info.event.title,
-        placement: 'top',
-        trigger: 'hover',
-        container: 'body'
-      });
-    }
-  });
-  
-  calendario.render();
-  
-  // Eventos para los botones de vista
-  $("#btn-vista-mes").on("click", function() {
-    calendario.changeView('dayGridMonth');
-  });
-  
-  $("#btn-vista-semana").on("click", function() {
-    calendario.changeView('timeGridWeek');
-  });
-  
-  $("#btn-vista-dia").on("click", function() {
-    calendario.changeView('timeGridDay');
-  });
-}
-
-/**
- * Muestra el modal para crear un nuevo mantenimiento
- */
-function mostrarModalNuevoMantenimiento() {
-  // Mostrar toast de información
-  if (window.showInfoToast) {
-    window.showInfoToast("Preparando formulario para nuevo mantenimiento preventivo...");
-  }
-
-  // Limpiar formulario
-  $("#form-mantenimiento")[0].reset();
-  $("#mantenimiento-id").val("");
-
-  // Establecer tipo de selección por defecto
-  $("#tipo-equipo").prop("checked", true);
-  $("#contenedor-equipo").removeClass("d-none");
-  $("#contenedor-componente").addClass("d-none");
-
-  // Actualizar título del modal
-  $("#modal-mantenimiento-titulo").text("Nuevo Mantenimiento Preventivo");
-
-  // Mostrar modal
-  const modal = new bootstrap.Modal(
-    document.getElementById("modal-mantenimiento")
-  );
-  modal.show();
-}
-
-/**
- * Cambia entre selección de equipo o componente
- */
-function cambiarTipoSeleccion() {
-  if ($("#tipo-equipo").is(":checked")) {
-    $("#contenedor-equipo").removeClass("d-none");
-    $("#contenedor-componente").addClass("d-none");
-    $("#mantenimiento-componente").val("");
-  } else {
-    $("#contenedor-equipo").addClass("d-none");
-    $("#contenedor-componente").removeClass("d-none");
-    $("#mantenimiento-equipo").val("");
-  }
-  
-  // Resetear información de orómetro
-  $("#orometro-actual").text("0");
-  $(".unidad-orometro").text("hrs");
-}
-
-/**
- * Carga los datos del equipo seleccionado
- */
-function cargarDatosEquipo() {
-  const equipoId = $("#mantenimiento-equipo").val();
-  
-  if (!equipoId) {
-    $("#orometro-actual").text("0");
-    $(".unidad-orometro").text("hrs");
-    return;
-  }
-  
-  // Mostrar indicador de carga
-  $("#orometro-actual").html('<small><i class="spinner-border spinner-border-sm"></i> Cargando...</small>');
-  
-  // Obtener datos del equipo
-  $.ajax({
-    url: getUrl("api/equipos/obtener.php"),
-    type: "GET",
-    data: { id: equipoId },
-    dataType: "json",
-    success: function(response) {
-      if (response.success) {
-        const equipo = response.data;
-        
-        // Actualizar información de orómetro
-        $("#orometro-actual").text(formatearNumero(equipo.orometro_actual || 0));
-        
-        // Actualizar unidad de orómetro
-        const unidad = getUnidadOrometro(equipo.tipo_orometro);
-        $(".unidad-orometro").text(unidad);
-        
-      } else {
-        $("#orometro-actual").text("0");
-        if (window.showErrorToast) {
-          window.showErrorToast(response.message || "Error al obtener datos del equipo");
-        }
-      }
-    },
-    error: function() {
-      $("#orometro-actual").text("0");
-      if (window.showErrorToast) {
-        window.showErrorToast("Error de conexión al obtener datos del equipo");
-      }
-    }
-  });
-}
-
-/**
- * Carga los datos del componente seleccionado
- */
-function cargarDatosComponente() {
-  const componenteId = $("#mantenimiento-componente").val();
-  
-  if (!componenteId) {
-    $("#orometro-actual").text("0");
-    $(".unidad-orometro").text("hrs");
-    return;
-  }
-  
-  // Mostrar indicador de carga
-  $("#orometro-actual").html('<small><i class="spinner-border spinner-border-sm"></i> Cargando...</small>');
-  
-  // Obtener datos del componente
-  $.ajax({
-    url: getUrl("api/equipos/componentes/obtener.php"),
-    type: "GET",
-    data: { id: componenteId },
-    dataType: "json",
-    success: function(response) {
-      if (response.success) {
-        const componente = response.data;
-        
-        // Actualizar información de orómetro
-        $("#orometro-actual").text(formatearNumero(componente.orometro_actual || 0));
-        
-        // Actualizar unidad de orómetro
-        const unidad = getUnidadOrometro(componente.tipo_orometro);
-        $(".unidad-orometro").text(unidad);
-        
-      } else {
-        $("#orometro-actual").text("0");
-        if (window.showErrorToast) {
-          window.showErrorToast(response.message || "Error al obtener datos del componente");
-        }
-      }
-    },
-    error: function() {
-      $("#orometro-actual").text("0");
-      if (window.showErrorToast) {
-        window.showErrorToast("Error de conexión al obtener datos del componente");
-      }
-    }
-  });
-}
-
-/**
- * Guarda un mantenimiento (nuevo o existente)
- */
-function guardarMantenimiento() {
-  // Validar formulario
-  if (!$("#form-mantenimiento").valid()) {
-    mostrarToast(
-      "warning",
-      "Atención",
-      "Por favor, complete todos los campos obligatorios"
-    );
-    return;
-  }
-
-  // Preparar datos del formulario
-  const formData = new FormData($("#form-mantenimiento")[0]);
-
-  // Mostrar indicador de carga
-  $("#btn-guardar-mantenimiento")
-    .prop("disabled", true)
-    .html(
-      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...'
-    );
-
-  // Enviar solicitud AJAX
-  $.ajax({
-    url: getUrl("api/mantenimiento/preventivo/guardar.php"),
-    type: "POST",
-    data: formData,
-    processData: false,
-    contentType: false,
-    dataType: "json",
-    success: function (response) {
-      if (response.success) {
-        // Cerrar modal
-        bootstrap.Modal.getInstance(
-          document.getElementById("modal-mantenimiento")
-        ).hide();
-
-        // Actualizar tabla
-        mantenimientosTable.ajax.reload();
-        
-        // Actualizar calendario si existe
-        if (calendario) {
-          calendario.refetchEvents();
-        }
-
-        // Mostrar mensaje de éxito
-        mostrarToast("success", "Éxito", response.message);
-      } else {
-        mostrarToast(
-          "error",
-          "Error",
-          response.message || "Error al guardar el mantenimiento"
-        );
-      }
-    },
-    error: function (xhr, status, error) {
-      mostrarToast(
-        "error",
-        "Error",
-        "Error en la comunicación con el servidor"
-      );
-      console.error(xhr.responseText);
-    },
-    complete: function () {
-      // Restaurar botón
-      $("#btn-guardar-mantenimiento").prop("disabled", false).html("Guardar");
-    },
-  });
-}
-
-/**
- * Edita un mantenimiento existente
- * @param {number} id - ID del mantenimiento a editar
- */
-function editarMantenimiento(id) {
-  // Verificar que el ID sea válido
-  if (!id || isNaN(parseInt(id))) {
-    mostrarToast("error", "Error", "ID de mantenimiento no válido");
-    console.error("ID de mantenimiento inválido:", id);
-    return;
-  }
-
-  // Mostrar indicador de carga
-  mostrarToast(
-    "info",
-    "Cargando",
-    "Obteniendo información del mantenimiento...",
-    1000
-  );
-
-  // Obtener datos del mantenimiento
-  $.ajax({
-    url: getUrl("api/mantenimiento/preventivo/obtener.php"),
-    type: "GET",
-    data: { id: id },
-    dataType: "json",
-    success: function (response) {
-      if (response.success) {
-        const mantenimiento = response.data;
-        mantenimientoActual = mantenimiento;
-
-        // Limpiar formulario
-        $("#form-mantenimiento")[0].reset();
-
-        // Llenar formulario con datos del mantenimiento
-        $("#mantenimiento-id").val(mantenimiento.id);
-        $("#mantenimiento-descripcion").val(mantenimiento.descripcion_razon);
-        $("#mantenimiento-orometro").val(mantenimiento.orometro_programado);
-        $("#mantenimiento-fecha").val(mantenimiento.fecha_hora_programada ? formatearFechaInput(mantenimiento.fecha_hora_programada) : "");
-        $("#mantenimiento-observaciones").val(mantenimiento.observaciones);
-
-        // Establecer tipo de selección
-        if (mantenimiento.componente_id) {
-          $("#tipo-componente").prop("checked", true);
-          $("#contenedor-equipo").addClass("d-none");
-          $("#contenedor-componente").removeClass("d-none");
-          $("#mantenimiento-componente").val(mantenimiento.componente_id);
-          cargarDatosComponente();
-        } else {
-          $("#tipo-equipo").prop("checked", true);
-          $("#contenedor-equipo").removeClass("d-none");
-          $("#contenedor-componente").addClass("d-none");
-          $("#mantenimiento-equipo").val(mantenimiento.equipo_id);
-          cargarDatosEquipo();
-        }
-
-        // Actualizar título del modal
-        $("#modal-mantenimiento-titulo").text("Editar Mantenimiento Preventivo");
-
-        // Mostrar modal
-        const modal = new bootstrap.Modal(
-          document.getElementById("modal-mantenimiento")
-        );
-        modal.show();
-      } else {
-        mostrarToast(
-          "error",
-          "Error",
-          response.message || "Error al obtener el mantenimiento"
-        );
-      }
-    },
-    error: function (xhr, status, error) {
-      console.error("Error en la solicitud AJAX:", status, error);
-      console.error("Respuesta del servidor:", xhr.responseText);
-
-      let mensaje = "Error en la comunicación con el servidor";
-      try {
-        const respuesta = JSON.parse(xhr.responseText);
-        if (respuesta && respuesta.message) {
-          mensaje = respuesta.message;
-        }
-      } catch (e) {
-        console.error("Error al parsear la respuesta:", e);
-      }
-
-      mostrarToast("error", "Error", mensaje);
-    },
-  });
-}
-
-/**
- * Muestra el modal para completar un mantenimiento
- * @param {number} id - ID del mantenimiento a completar
- */
-function completarMantenimiento(id) {
-  // Verificar que el ID sea válido
-  if (!id || isNaN(parseInt(id))) {
-    mostrarToast("error", "Error", "ID de mantenimiento no válido");
-    console.error("ID de mantenimiento inválido:", id);
-    return;
-  }
-
-  // Obtener datos del mantenimiento
-  $.ajax({
-    url: getUrl("api/mantenimiento/preventivo/obtener.php"),
-    type: "GET",
-    data: { id: id },
-    dataType: "json",
-    success: function (response) {
-      if (response.success) {
-        const mantenimiento = response.data;
-        mantenimientoActual = mantenimiento;
-
-        // Mostrar modal de detalles
-        verDetallesMantenimiento(id, true);
-      } else {
-        mostrarToast(
-          "error",
-          "Error",
-          response.message || "Error al obtener el mantenimiento"
-        );
-      }
-    },
-    error: function (xhr, status, error) {
-      mostrarToast(
-        "error",
-        "Error",
-        "Error en la comunicación con el servidor"
-      );
-      console.error(xhr.responseText);
-    },
-  });
-}
-
-/**
- * Muestra el formulario para completar un mantenimiento
- */
-function mostrarFormularioCompletar() {
-  // Ocultar botón de completar y mostrar formulario
-  $("#btn-completar-mantenimiento").addClass("d-none");
-  $("#btn-guardar-completar").removeClass("d-none");
-  $("#contenedor-completar").removeClass("d-none");
-  
-  // Establecer ID del mantenimiento
-  $("#completar-id").val(mantenimientoActual.id);
-}
-
-/**
- * Guarda el completado de un mantenimiento
- */
-function guardarCompletarMantenimiento() {
-  // Mostrar modal de confirmación
-  const modal = new bootstrap.Modal(
-    document.getElementById("modal-confirmar-completar")
-  );
-  modal.show();
-}
-
-/**
- * Completa un mantenimiento después de la confirmación
- */
-function completarMantenimientoConfirmado() {
-  const id = $("#completar-id").val();
-  const observaciones = $("#completar-observaciones").val();
-  
-  if (!id) {
-    mostrarToast("error", "Error", "ID de mantenimiento no válido");
-    return;
-  }
-
-  // Mostrar indicador de carga
-  $("#btn-confirmar-completar")
-    .prop("disabled", true)
-    .html(
-      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...'
-    );
-
-  // Enviar solicitud AJAX
-  $.ajax({
-    url: getUrl("api/mantenimiento/preventivo/completar.php"),
-    type: "POST",
-    data: { 
-      id: id,
-      observaciones: observaciones
-    },
-    dataType: "json",
-    success: function (response) {
-      if (response.success) {
-        // Cerrar modales
-        bootstrap.Modal.getInstance(
-          document.getElementById("modal-confirmar-completar")
-        ).hide();
-        
-        bootstrap.Modal.getInstance(
-          document.getElementById("modal-detalle-mantenimiento")
-        ).hide();
-
-        // Actualizar tabla
-        mantenimientosTable.ajax.reload();
-        
-        // Actualizar calendario si existe
-        if (calendario) {
-          calendario.refetchEvents();
-        }
-
-        // Mostrar mensaje de éxito
-        mostrarToast("success", "Éxito", response.message);
-      } else {
-        mostrarToast(
-          "error",
-          "Error",
-          response.message || "Error al completar el mantenimiento"
-        );
-      }
-    },
-    error: function (xhr, status, error) {
-      mostrarToast(
-        "error",
-        "Error",
-        "Error en la comunicación con el servidor"
-      );
-      console.error(xhr.responseText);
-    },
-    complete: function () {
-      // Restaurar botón
-      $("#btn-confirmar-completar")
-        .prop("disabled", false)
-        .html('<i class="bi bi-check-circle me-2"></i>Confirmar Completado');
+    preDrawCallback: function () {
+      mostrarCargando();
     },
   });
 }
 
 /**
  * Carga los detalles de un mantenimiento en el panel lateral
- * @param {number} id - ID del mantenimiento
+ * @param {number} id ID del mantenimiento
  */
 function cargarDetallesMantenimiento(id) {
   // Mostrar indicador de carga
@@ -1222,295 +521,364 @@ function cargarDetallesMantenimiento(id) {
   $.ajax({
     url: getUrl("api/mantenimiento/preventivo/obtener.php"),
     type: "GET",
-    data: { id: id },
     dataType: "json",
-    success: (response) => {
-      if (response.success && response.data) {
-        const mantenimiento = response.data;
-        mantenimientoSeleccionado = mantenimiento;
-        
-        // Determinar tipo (equipo o componente)
-        const esComponente = mantenimiento.componente_id ? true : false;
-        const nombre = esComponente ? mantenimiento.componente_nombre : mantenimiento.equipo_nombre;
-        const codigo = esComponente ? mantenimiento.componente_codigo : mantenimiento.equipo_codigo;
-        const unidad = getUnidadOrometro(mantenimiento.tipo_orometro);
-        const imagenUrl = mantenimiento.imagen || getUrl("assets/img/equipos/default.png");
+    data: { id: id },
+    success: function (response) {
+      if (response.success) {
+        const data = response.data;
+        mantenimientoSeleccionado = id;
 
-        // Actualizar el encabezado con la imagen
+        // Determinar si se puede completar el mantenimiento
+        const puedeCompletar = data.mantenimiento.estado === "pendiente";
+
+        // Actualizar título del panel
         $("#mantenimiento-detalle .detail-header").html(`
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h2 class="detail-title">${nombre}</h2>
-              <p class="detail-subtitle">Código: ${codigo}</p>
-            </div>
-            <div class="detail-header-image">
-              <img src="${imagenUrl}" alt="${nombre}" class="detail-header-img" data-image-viewer="true">
-            </div>
-          </div>
-        `);
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="detail-title">${
+                              data.tipo === "equipo" ? "Equipo" : "Componente"
+                            }: ${
+          data.tipo === "equipo" ? data.equipo.nombre : data.componente.nombre
+        }</h2>
+                            <p class="detail-subtitle">Código: ${
+                              data.tipo === "equipo"
+                                ? data.equipo.codigo
+                                : data.componente.codigo
+                            }</p>
+                        </div>
+                        <div>
+                            <span class="estado-badge estado-${
+                              data.mantenimiento.estado
+                            }">${capitalizarPrimeraLetra(
+          data.mantenimiento.estado
+        )}</span>
+                        </div>
+                    </div>
+                `);
 
         // Calcular tiempo restante para mantenimiento
         let tiempoRestante = "";
         let colorClase = "success";
 
-        if (mantenimiento.estado === "pendiente") {
-          // Verificar si hay orómetro programado
-          if (mantenimiento.orometro_programado && mantenimiento.orometro_actual) {
-            const restante = Number.parseFloat(mantenimiento.orometro_programado) - Number.parseFloat(mantenimiento.orometro_actual);
-            
-            // Determinar color según proximidad
-            if (restante <= 0) {
-              colorClase = "danger";
-              tiempoRestante = `
-                <div class="tiempo-restante-container text-center mb-4">
-                  <h3 class="tiempo-restante-titulo">¡Mantenimiento requerido!</h3>
-                  <div class="tiempo-restante-valor text-danger">Excedido por ${formatearNumero(Math.abs(restante))} ${unidad}</div>
-                  <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-danger" role="progressbar" 
-                      style="width: 100%" 
-                      aria-valuenow="100" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"></div>
-                  </div>
-                </div>
-              `;
-            } else if (restante <= mantenimiento.orometro_programado * 0.1) {
-              colorClase = "warning";
-              tiempoRestante = `
-                <div class="tiempo-restante-container text-center mb-4">
-                  <h3 class="tiempo-restante-titulo">Mantenimiento próximo</h3>
-                  <div class="tiempo-restante-valor text-warning">Faltan ${formatearNumero(restante)} ${unidad}</div>
-                  <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-warning" role="progressbar" 
-                      style="width: 90%" 
-                      aria-valuenow="90" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"></div>
-                  </div>
-                </div>
-              `;
-            } else {
-              tiempoRestante = `
-                <div class="tiempo-restante-container text-center mb-4">
-                  <h3 class="tiempo-restante-titulo">Tiempo para mantenimiento</h3>
-                  <div class="tiempo-restante-valor text-success">Faltan ${formatearNumero(restante)} ${unidad}</div>
-                  <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-success" role="progressbar" 
-                      style="width: ${Math.min(100 - (restante / mantenimiento.orometro_programado) * 100, 80)}%" 
-                      aria-valuenow="${Math.min(100 - (restante / mantenimiento.orometro_programado) * 100, 80)}" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"></div>
-                  </div>
-                </div>
-              `;
-            }
+        if (data.dias_restantes !== null) {
+          if (data.dias_restantes <= 0) {
+            colorClase = "danger";
+            tiempoRestante = `
+                            <div class="tiempo-restante-container text-center mb-4">
+                                <h3 class="tiempo-restante-titulo">¡Mantenimiento requerido!</h3>
+                                <div class="tiempo-restante-valor text-danger">Hace ${Math.abs(
+                                  data.dias_restantes
+                                )} días</div>
+                            </div>
+                        `;
+          } else if (data.dias_restantes <= 3) {
+            colorClase = "danger";
+            tiempoRestante = `
+                            <div class="tiempo-restante-container text-center mb-4">
+                                <h3 class="tiempo-restante-titulo">Mantenimiento próximo</h3>
+                                <div class="tiempo-restante-valor text-danger">Faltan ${data.dias_restantes} días</div>
+                            </div>
+                        `;
+          } else if (data.dias_restantes <= 7) {
+            colorClase = "warning";
+            tiempoRestante = `
+                            <div class="tiempo-restante-container text-center mb-4">
+                                <h3 class="tiempo-restante-titulo">Mantenimiento programado</h3>
+                                <div class="tiempo-restante-valor text-warning">Faltan ${data.dias_restantes} días</div>
+                            </div>
+                        `;
+          } else {
+            tiempoRestante = `
+                            <div class="tiempo-restante-container text-center mb-4">
+                                <h3 class="tiempo-restante-titulo">Mantenimiento programado</h3>
+                                <div class="tiempo-restante-valor text-success">Faltan ${data.dias_restantes} días</div>
+                            </div>
+                        `;
           }
-          
-          // Verificar si hay fecha programada
-          if (mantenimiento.fecha_hora_programada) {
-            const fechaProgramada = new Date(mantenimiento.fecha_hora_programada);
-            const ahora = new Date();
-            const diferenciaDias = Math.ceil((fechaProgramada - ahora) / (1000 * 60 * 60 * 24));
-            
-            if (diferenciaDias < 0) {
-              colorClase = "danger";
-              tiempoRestante += `
-                <div class="tiempo-restante-container text-center mb-4">
-                  <h3 class="tiempo-restante-titulo">¡Fecha vencida!</h3>
-                  <div class="tiempo-restante-valor text-danger">Vencido hace ${Math.abs(diferenciaDias)} días</div>
-                  <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-danger" role="progressbar" 
-                      style="width: 100%" 
-                      aria-valuenow="100" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"></div>
-                  </div>
-                </div>
-              `;
-            } else if (diferenciaDias <= 3) {
-              colorClase = "warning";
-              tiempoRestante += `
-                <div class="tiempo-restante-container text-center mb-4">
-                  <h3 class="tiempo-restante-titulo">Fecha próxima</h3>
-                  <div class="tiempo-restante-valor text-warning">Faltan ${diferenciaDias} días</div>
-                  <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-warning" role="progressbar" 
-                      style="width: 90%" 
-                      aria-valuenow="90" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"></div>
-                  </div>
-                </div>
-              `;
-            } else {
-              tiempoRestante += `
-                <div class="tiempo-restante-container text-center mb-4">
-                  <h3 class="tiempo-restante-titulo">Tiempo para la fecha programada</h3>
-                  <div class="tiempo-restante-valor text-success">Faltan ${diferenciaDias} días</div>
-                  <div class="progress mt-2" style="height: 8px;">
-                    <div class="progress-bar bg-success" role="progressbar" 
-                      style="width: 50%" 
-                      aria-valuenow="50" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"></div>
-                  </div>
-                </div>
-              `;
-            }
-          }
-        } else {
-          // Mantenimiento completado
-          tiempoRestante = `
-            <div class="tiempo-restante-container text-center mb-4">
-              <h3 class="tiempo-restante-titulo">Mantenimiento completado</h3>
-              <div class="tiempo-restante-valor text-secondary">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                ${mantenimiento.fecha_realizado ? formatearFecha(mantenimiento.fecha_realizado) : 'Completado'}
-              </div>
-            </div>
-          `;
         }
+
+        // Construir barra de progreso
+        const barraProgreso = `
+                    <div class="mt-3">
+                        <h4 class="fs-6 mb-2">Progreso del Orómetro</h4>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${
+                              data.progreso >= 90
+                                ? "bg-danger"
+                                : data.progreso >= 75
+                                ? "bg-warning"
+                                : "bg-success"
+                            }" 
+                                role="progressbar" 
+                                style="width: ${data.progreso}%" 
+                                aria-valuenow="${data.progreso}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                                ${Math.round(data.progreso)}%
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small>${formatearNumero(data.anterior_orometro)} ${
+          data.unidad_orometro
+        }</small>
+                            <small>${formatearNumero(data.orometro_actual)} ${
+          data.unidad_orometro
+        }</small>
+                            <small>${formatearNumero(data.proximo_orometro)} ${
+          data.unidad_orometro
+        }</small>
+                        </div>
+                    </div>
+                `;
+
+        // Construir información del mantenimiento
+        let infoMantenimiento = `
+                    <div class="detail-section">
+                        <div class="detail-section-title">
+                            <i class="bi bi-tools"></i> Información del Mantenimiento
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Descripción:</span>
+                            <p class="detail-value">${
+                              data.mantenimiento.descripcion_razon
+                            }</p>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Fecha Programada:</span>
+                            <span class="detail-value">${
+                              data.fecha_formateada
+                            }</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Orómetro Programado:</span>
+                            <span class="detail-value">${formatearNumero(
+                              data.mantenimiento.orometro_programado
+                            )} ${data.unidad_orometro}</span>
+                        </div>
+                `;
+
+        if (data.mantenimiento.fecha_realizado) {
+          infoMantenimiento += `
+                        <div class="detail-item">
+                            <span class="detail-label">Fecha Realizado:</span>
+                            <span class="detail-value">${new Date(
+                              data.mantenimiento.fecha_realizado
+                            ).toLocaleDateString("es-ES")}</span>
+                        </div>
+                    `;
+        }
+
+        if (data.mantenimiento.observaciones) {
+          infoMantenimiento += `
+                        <div class="detail-item">
+                            <span class="detail-label">Observaciones:</span>
+                            <p class="detail-value">${data.mantenimiento.observaciones}</p>
+                        </div>
+                    `;
+        }
+
+        infoMantenimiento += `</div>`;
+
+        // Construir botones de acción
+        let botonesAccion = `
+                    <div class="detail-actions">
+                `;
+
+        if (puedeCompletar) {
+          botonesAccion += `
+                        <button type="button" class="btn btn-sm btn-success btn-completar" data-id="${id}">
+                            <i class="bi bi-check-circle"></i> Completar Mantenimiento
+                        </button>
+                    `;
+        }
+
+        botonesAccion += `</div>`;
 
         // Actualizar contenido del panel
         $("#mantenimiento-detalle .detail-content").html(`
-          ${tiempoRestante}
-          
-          <!-- Información básica -->
-          <div class="detail-section">
-            <div class="detail-section-title">
-              <i class="bi bi-info-circle"></i> Información Básica
-            </div>
-            <div class="row g-2">
-              <div class="col-md-6">
-                <div class="detail-item">
-                  <span class="detail-label">Tipo:</span>
-                  <span class="detail-value">${esComponente ? 'Componente' : 'Equipo'}</span>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="detail-item">
-                  <span class="detail-label">Estado:</span>
-                  <span class="detail-value">
-                    <span class="estado-badge estado-${mantenimiento.estado.toLowerCase()}">${capitalizarPrimeraLetra(mantenimiento.estado)}</span>
-                  </span>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="detail-item">
-                  <span class="detail-label">Orómetro Programado:</span>
-                  <span class="detail-value">${formatearNumero(mantenimiento.orometro_programado)} ${unidad}</span>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="detail-item">
-                  <span class="detail-label">Orómetro Actual:</span>
-                  <span class="detail-value">${formatearNumero(mantenimiento.orometro_actual)} ${unidad}</span>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="detail-item">
-                  <span class="detail-label">Fecha Programada:</span>
-                  <span class="detail-value">${mantenimiento.fecha_hora_programada ? formatearFecha(mantenimiento.fecha_hora_programada) : 'No especificada'}</span>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="detail-item">
-                  <span class="detail-label">Fecha Realizado:</span>
-                  <span class="detail-value">${mantenimiento.fecha_realizado ? formatearFecha(mantenimiento.fecha_realizado) : '-'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Descripción y observaciones -->
-          <div class="detail-section">
-            <div class="detail-section-title">
-              <i class="bi bi-chat-left-text"></i> Descripción y Observaciones
-            </div>
-            <div class="detail-item mb-2">
-              <span class="detail-label">Descripción/Razón:</span>
-              <p class="detail-value">${mantenimiento.descripcion_razon || 'Sin descripción'}</p>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Observaciones:</span>
-              <p class="detail-value">${mantenimiento.observaciones || 'Sin observaciones'}</p>
-            </div>
-          </div>
-          
-          <div class="detail-actions">
-            <button type="button" class="btn btn-sm btn-primary btn-ver-detalles" data-id="${mantenimiento.id}">
-              <i class="bi bi-search"></i> Ver Detalles Completos
-            </button>
-            ${
-              tienePermiso("mantenimientos.preventivo.editar") && mantenimiento.estado !== "completado"
-                ? `
-                <button type="button" class="btn btn-sm btn-secondary btn-editar" data-id="${mantenimiento.id}">
-                  <i class="bi bi-pencil"></i> Editar
-                </button>
-              `
-                : ""
-            }
-            ${
-              tienePermiso("mantenimientos.preventivo.completar") && mantenimiento.estado !== "completado"
-                ? `
-                <button type="button" class="btn btn-sm btn-success btn-completar" data-id="${mantenimiento.id}">
-                  <i class="bi bi-check-circle"></i> Completar
-                </button>
-              `
-                : ""
-            }
-          </div>
-        `);
-
-        // Inicializar el visor de imágenes para la imagen del encabezado
-        $(".detail-header-img").on("click", function () {
-          if (window.imageViewer) {
-            window.imageViewer.show(
-              $(this).attr("src"),
-              "Imagen del " + (esComponente ? "componente" : "equipo")
-            );
-          }
-        });
+                    ${tiempoRestante}
+                    ${barraProgreso}
+                    ${infoMantenimiento}
+                    ${botonesAccion}
+                `);
 
         // Eventos para botones en el panel
-        $("#mantenimiento-detalle .btn-ver-detalles").on("click", function () {
-          verDetallesMantenimiento($(this).data("id"));
-        });
-
-        $("#mantenimiento-detalle .btn-editar").on("click", function () {
-          editarMantenimiento($(this).data("id"));
-        });
-
         $("#mantenimiento-detalle .btn-completar").on("click", function () {
-          completarMantenimiento($(this).data("id"));
+          abrirModalCompletar($(this).data("id"));
         });
       } else {
         // Mostrar mensaje de error
         $("#mantenimiento-detalle .detail-content").html(`
-          <div class="detail-empty">
-            <div class="detail-empty-icon">
-              <i class="bi bi-exclamation-triangle"></i>
-            </div>
-            <div class="detail-empty-text">
-              Error al cargar los detalles del mantenimiento
-            </div>
-          </div>
-        `);
+                    <div class="detail-empty">
+                        <div class="detail-empty-icon">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div class="detail-empty-text">
+                            Error al cargar los detalles del mantenimiento
+                        </div>
+                    </div>
+                `);
       }
     },
-    error: (xhr, status, error) => {
+    error: function (xhr, status, error) {
       // Mostrar mensaje de error
       $("#mantenimiento-detalle .detail-content").html(`
-        <div class="detail-empty">
-          <div class="detail-empty-icon">
-            <i class="bi bi-exclamation-triangle"></i>
-          </div>
-          <div class="detail-empty-text">
-            Error de conexión al servidor
-          </div>
-        </div>
-      `);
+                <div class="detail-empty">
+                    <div class="detail-empty-icon">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="detail-empty-text">
+                        Error de conexión al servidor
+                    </div>
+                </div>
+            `);
       console.error("Error al obtener detalles del mantenimiento:", error);
+    },
+  });
+}
+
+/**
+ * Abre el modal para completar un mantenimiento
+ * @param {number} id ID del mantenimiento
+ */
+function abrirModalCompletar(id) {
+  mostrarCargando();
+
+  $.ajax({
+    url: getUrl("api/mantenimiento/preventivo/obtener.php"),
+    type: "GET",
+    dataType: "json",
+    data: { id: id },
+    success: function (response) {
+      if (response.success) {
+        const data = response.data;
+
+        // Verificar si el mantenimiento está pendiente
+        if (data.mantenimiento.estado !== "pendiente") {
+          mostrarToast(
+            "warning",
+            "Advertencia",
+            "Este mantenimiento ya ha sido completado o cancelado"
+          );
+          return;
+        }
+
+        // Establecer valores en el formulario
+        $("#completar-id").val(id);
+        $("#completar-tipo").val(data.tipo);
+
+        // Establecer valor actual del orómetro
+        let orometroActual = 0;
+        if (data.tipo === "equipo" && data.equipo) {
+          orometroActual = data.equipo.orometro_actual;
+        } else if (data.tipo === "componente" && data.componente) {
+          orometroActual = data.componente.orometro_actual;
+        }
+
+        $("#completar-orometro-actual").val(orometroActual);
+        $("#completar-unidad-orometro").text(data.unidad_orometro);
+        $("#completar-observaciones").val("");
+
+        // Mostrar modal
+        const modalCompletar = new bootstrap.Modal(
+          document.getElementById("modal-completar")
+        );
+        modalCompletar.show();
+      } else {
+        mostrarToast(
+          "error",
+          "Error",
+          response.message || "Error al obtener los datos del mantenimiento"
+        );
+      }
+    },
+    error: function (xhr, status, error) {
+      console.error("Error en la solicitud AJAX:", xhr.responseText);
+      mostrarToast(
+        "error",
+        "Error",
+        "Error al obtener los datos del mantenimiento"
+      );
+    },
+    complete: function () {
+      ocultarCargando();
+    },
+  });
+}
+
+/**
+ * Guarda el mantenimiento completado
+ */
+function guardarCompletarMantenimiento() {
+  // Validar formulario
+  if (!validarFormularioCompletar()) {
+    return;
+  }
+
+  // Obtener datos del formulario
+  const id = $("#completar-id").val();
+  const orometroActual = $("#completar-orometro-actual").val();
+  const observaciones = $("#completar-observaciones").val();
+
+  // Mostrar indicador de carga
+  mostrarCargando();
+
+  // Deshabilitar botón para evitar doble envío
+  $("#btn-guardar-completar")
+    .prop("disabled", true)
+    .html(
+      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...'
+    );
+
+  // Enviar solicitud
+  $.ajax({
+    url: getUrl("api/mantenimiento/preventivo/completar.php"),
+    type: "POST",
+    dataType: "json",
+    data: {
+      id: id,
+      orometro_actual: orometroActual,
+      observaciones: observaciones,
+    },
+    success: function (response) {
+      if (response.success) {
+        // Cerrar modal
+        const modalCompletar = bootstrap.Modal.getInstance(
+          document.getElementById("modal-completar")
+        );
+        modalCompletar.hide();
+
+        // Mostrar mensaje de éxito
+        mostrarToast(
+          "success",
+          "Éxito",
+          response.message || "Mantenimiento completado correctamente"
+        );
+
+        // Recargar tabla
+        mantenimientosTable.ajax.reload();
+
+        // Limpiar panel de detalles
+        ocultarDetalleMantenimiento();
+
+        // Verificar si hay mantenimientos faltantes
+        verificarMantenimientosPreventivos();
+      } else {
+        mostrarToast(
+          "error",
+          "Error",
+          response.message || "Error al completar el mantenimiento"
+        );
+      }
+    },
+    error: function (xhr, status, error) {
+      console.error("Error en la solicitud AJAX:", xhr.responseText);
+      mostrarToast("error", "Error", "Error al completar el mantenimiento");
+    },
+    complete: function () {
+      ocultarCargando();
+      // Restaurar botón
+      $("#btn-guardar-completar").prop("disabled", false).html("Guardar");
     },
   });
 }
@@ -1520,235 +888,48 @@ function cargarDetallesMantenimiento(id) {
  */
 function ocultarDetalleMantenimiento() {
   // Restaurar contenido por defecto
-  $("#mantenimiento-detalle").html(`
-    <div class="detail-header">
-      <h2 class="detail-title">Detalles del Mantenimiento</h2>
-      <p class="detail-subtitle">Seleccione un mantenimiento para ver información</p>
-    </div>
-    <div class="detail-content">
-      <div class="detail-empty">
-        <div class="detail-empty-icon">
-          <i class="bi bi-info-circle"></i>
-        </div>
-        <div class="detail-empty-text">
-          Seleccione un mantenimiento para ver sus detalles
-        </div>
-      </div>
-    </div>
-  `);
-}
+  $("#mantenimiento-detalle .detail-header").html(`
+        <h2 class="detail-title">Detalles del Mantenimiento</h2>
+        <p class="detail-subtitle">Seleccione un mantenimiento para ver información</p>
+    `);
 
-/**
- * Muestra los detalles completos de un mantenimiento en un modal
- * @param {number} id - ID del mantenimiento
- * @param {boolean} mostrarCompletado - Indica si se debe mostrar la opción de completar
- */
-function verDetallesMantenimiento(id, mostrarCompletado = false) {
-  // Mostrar indicador de carga
-  showLoadingOverlay();
-
-  // Mostrar toast de información
-  if (window.showInfoToast) {
-    window.showInfoToast("Cargando detalles del mantenimiento...");
-  }
-
-  // Obtener datos del mantenimiento
-  $.ajax({
-    url: getUrl("api/mantenimiento/preventivo/obtener.php"),
-    type: "GET",
-    data: { id: id },
-    dataType: "json",
-    success: (response) => {
-      // Ocultar indicador de carga
-      hideLoadingOverlay();
-
-      if (response.success && response.data) {
-        const mantenimiento = response.data;
-        mantenimientoActual = mantenimiento;
-        
-        // Determinar tipo (equipo o componente)
-        const esComponente = mantenimiento.componente_id ? true : false;
-        const nombre = esComponente ? mantenimiento.componente_nombre : mantenimiento.equipo_nombre;
-        const codigo = esComponente ? mantenimiento.componente_codigo : mantenimiento.equipo_codigo;
-        const unidad = getUnidadOrometro(mantenimiento.tipo_orometro);
-
-        // Actualizar datos en el modal
-        $("#detalle-nombre").text(nombre);
-        $("#detalle-codigo").text(codigo || "-");
-        $("#detalle-tipo").text(esComponente ? "Componente" : "Equipo");
-        $("#detalle-tipo-orometro").text(capitalizarPrimeraLetra(mantenimiento.tipo_orometro) || "-");
-        
-        // Actualizar información de orómetros
-        $("#detalle-orometro-programado").text(formatearNumero(mantenimiento.orometro_programado || 0) + " " + unidad);
-        $("#detalle-orometro-actual").text(formatearNumero(mantenimiento.orometro_actual || 0) + " " + unidad);
-        $("#detalle-fecha-programada").text(mantenimiento.fecha_hora_programada ? formatearFecha(mantenimiento.fecha_hora_programada) : "No especificada");
-        $("#detalle-fecha-realizado").text(mantenimiento.fecha_realizado ? formatearFecha(mantenimiento.fecha_realizado) : "-");
-        
-        // Actualizar descripción y observaciones
-        $("#detalle-descripcion").text(mantenimiento.descripcion_razon || "-");
-        $("#detalle-observaciones").text(mantenimiento.observaciones || "-");
-
-        // Calcular y mostrar tiempo restante
-        if (mantenimiento.estado === "pendiente") {
-          let tiempoRestanteHTML = "";
-          
-          // Por orómetro
-          if (mantenimiento.orometro_programado && mantenimiento.orometro_actual) {
-            const restante = Number.parseFloat(mantenimiento.orometro_programado) - Number.parseFloat(mantenimiento.orometro_actual);
-            
-            if (restante <= 0) {
-              tiempoRestanteHTML += `
-                <div class="alert alert-danger mb-2">
-                  <strong>¡Mantenimiento requerido por orómetro!</strong> Excedido por ${formatearNumero(Math.abs(restante))} ${unidad}
-                </div>
-              `;
-            } else if (restante <= mantenimiento.orometro_programado * 0.1) {
-              tiempoRestanteHTML += `
-                <div class="alert alert-warning mb-2">
-                  <strong>Mantenimiento próximo por orómetro:</strong> Faltan ${formatearNumero(restante)} ${unidad}
-                </div>
-              `;
-            } else {
-              tiempoRestanteHTML += `
-                <div class="alert alert-success mb-2">
-                  <strong>Tiempo para mantenimiento por orómetro:</strong> Faltan ${formatearNumero(restante)} ${unidad}
-                </div>
-              `;
-            }
-          }
-          
-          // Por fecha
-          if (mantenimiento.fecha_hora_programada) {
-            const fechaProgramada = new Date(mantenimiento.fecha_hora_programada);
-            const ahora = new Date();
-            const diferenciaDias = Math.ceil((fechaProgramada - ahora) / (1000 * 60 * 60 * 24));
-            
-            if (diferenciaDias < 0) {
-              tiempoRestanteHTML += `
-                <div class="alert alert-danger mb-2">
-                  <strong>¡Fecha vencida!</strong> Vencido hace ${Math.abs(diferenciaDias)} días
-                </div>
-              `;
-            } else if (diferenciaDias <= 3) {
-              tiempoRestanteHTML += `
-                <div class="alert alert-warning mb-2">
-                  <strong>Fecha próxima:</strong> Faltan ${diferenciaDias} días
-                </div>
-              `;
-            } else {
-              tiempoRestanteHTML += `
-                <div class="alert alert-success mb-2">
-                  <strong>Tiempo para la fecha programada:</strong> Faltan ${diferenciaDias} días
-                </div>
-              `;
-            }
-          }
-          
-          $("#detalle-tiempo-restante").html(tiempoRestanteHTML);
-        } else {
-          $("#detalle-tiempo-restante").html(`
-            <div class="alert alert-secondary mb-2">
-              <strong>Mantenimiento completado:</strong> ${mantenimiento.fecha_realizado ? formatearFecha(mantenimiento.fecha_realizado) : 'Completado'}
+  $("#mantenimiento-detalle .detail-content").html(`
+        <div class="detail-empty">
+            <div class="detail-empty-icon">
+                <i class="bi bi-info-circle"></i>
             </div>
-          `);
-        }
+            <div class="detail-empty-text">
+                Seleccione un mantenimiento para ver sus detalles
+            </div>
+        </div>
+    `);
 
-        // Actualizar imagen
-        const imagenUrl = mantenimiento.imagen || getUrl("assets/img/equipos/default.png");
-        $("#detalle-imagen").attr("src", imagenUrl);
-
-        // Actualizar estado
-        const estadoClases = {
-          pendiente: "bg-primary",
-          completado: "bg-secondary",
-        };
-
-        const estadoTexto = {
-          pendiente: "Pendiente",
-          completado: "Completado",
-        };
-
-        $("#detalle-estado").attr(
-          "class",
-          "badge rounded-pill " +
-            (estadoClases[mantenimiento.estado] || "bg-secondary")
-        );
-        $("#detalle-estado").text(
-          estadoTexto[mantenimiento.estado] || mantenimiento.estado
-        );
-
-        // Configurar botones según el estado
-        if (mantenimiento.estado === "completado") {
-          $("#btn-editar-desde-detalle").addClass("d-none");
-          $("#btn-completar-mantenimiento").addClass("d-none");
-          $("#btn-guardar-completar").addClass("d-none");
-          $("#contenedor-completar").addClass("d-none");
-        } else {
-          $("#btn-editar-desde-detalle").removeClass("d-none");
-          $("#btn-completar-mantenimiento").removeClass("d-none");
-          $("#btn-guardar-completar").addClass("d-none");
-          $("#contenedor-completar").addClass("d-none");
-          
-          // Si se debe mostrar el formulario de completar
-          if (mostrarCompletado) {
-            mostrarFormularioCompletar();
-          }
-        }
-
-        // Mostrar modal
-        const modalDetalle = new bootstrap.Modal(
-          document.getElementById("modal-detalle-mantenimiento")
-        );
-        modalDetalle.show();
-      } else {
-        if (window.showErrorToast) {
-          window.showErrorToast(
-            response.message || "Error al obtener los detalles del mantenimiento"
-          );
-        }
-      }
-    },
-    error: (xhr, status, error) => {
-      // Ocultar indicador de carga
-      hideLoadingOverlay();
-      if (window.showErrorToast) {
-        window.showErrorToast("Error de conexión al servidor");
-      }
-      console.error("Error al obtener detalles del mantenimiento:", error);
-    },
-  });
+  // Quitar clase de selección
+  $("#mantenimiento-detalle").removeClass("active loaded");
 }
 
 /**
- * Edita un mantenimiento desde el modal de detalles
+ * Valida el formulario de completar mantenimiento
+ * @returns {boolean} true si el formulario es válido, false en caso contrario
  */
-function editarDesdeDetalle() {
-  // Cerrar modal de detalles
-  const modalDetalle = bootstrap.Modal.getInstance(
-    document.getElementById("modal-detalle-mantenimiento")
-  );
-  modalDetalle.hide();
-
-  // Abrir modal de edición
-  if (mantenimientoActual && mantenimientoActual.id) {
-    setTimeout(() => {
-      editarMantenimiento(mantenimientoActual.id);
-    }, 500);
+function validarFormularioCompletar() {
+  // Validar que el orómetro actual sea un número válido
+  const orometroActual = $("#completar-orometro-actual").val();
+  if (
+    !orometroActual ||
+    isNaN(parseFloat(orometroActual)) ||
+    parseFloat(orometroActual) < 0
+  ) {
+    mostrarToast(
+      "warning",
+      "Advertencia",
+      "Debe ingresar un valor válido para el orómetro actual"
+    );
+    $("#completar-orometro-actual").focus();
+    return false;
   }
-}
 
-/**
- * Amplía la imagen del mantenimiento en el modal de detalles
- */
-function ampliarImagenDetalle() {
-  const imagen = $("#detalle-imagen").attr("src");
-  try {
-    if (imagen && window.imageViewer) {
-      window.imageViewer.show(imagen, "Imagen del equipo/componente");
-    }
-  } catch (e) {
-    console.error("Error al mostrar la imagen:", e);
-  }
+  return true;
 }
 
 /**
@@ -1756,36 +937,39 @@ function ampliarImagenDetalle() {
  */
 function aplicarFiltros() {
   // Obtener valores de filtros
-  const equipo = $("#filtro-equipo").val();
-  const componente = $("#filtro-componente").val();
   const estado = $("#filtro-estado").val();
+  const tipo = $("#filtro-tipo").val();
   const fechaDesde = $("#filtro-fecha-desde").val();
   const fechaHasta = $("#filtro-fecha-hasta").val();
 
   // Actualizar filtros activos
   filtrosAplicados = {};
-  if (equipo) filtrosAplicados.equipo_id = equipo;
-  if (componente) filtrosAplicados.componente_id = componente;
   if (estado) filtrosAplicados.estado = estado;
-  if (fechaDesde) filtrosAplicados.fecha_desde = fechaDesde;
-  if (fechaHasta) filtrosAplicados.fecha_hasta = fechaHasta;
+  if (tipo) filtrosAplicados.tipo = tipo;
+
+  // Convertir fechas de DD/MM/YYYY a YYYY-MM-DD para el servidor
+  if (fechaDesde) {
+    const partesFechaDesde = fechaDesde.split("/");
+    if (partesFechaDesde.length === 3) {
+      filtrosAplicados.fecha_desde = `${partesFechaDesde[2]}-${partesFechaDesde[1]}-${partesFechaDesde[0]}`;
+    }
+  }
+
+  if (fechaHasta) {
+    const partesFechaHasta = fechaHasta.split("/");
+    if (partesFechaHasta.length === 3) {
+      filtrosAplicados.fecha_hasta = `${partesFechaHasta[2]}-${partesFechaHasta[1]}-${partesFechaHasta[0]}`;
+    }
+  }
 
   // Mostrar toast de información
-  if (window.showInfoToast) {
-    window.showInfoToast("Aplicando filtros...");
-  }
+  mostrarToast("info", "Filtros", "Aplicando filtros...");
 
   // Recargar tabla
   mantenimientosTable.ajax.reload();
-  
-  // Actualizar calendario si existe
-  if (calendario) {
-    calendario.refetchEvents();
-  }
 
   // Limpiar panel de detalles
   ocultarDetalleMantenimiento();
-  mantenimientoSeleccionado = null;
 }
 
 /**
@@ -1793,58 +977,61 @@ function aplicarFiltros() {
  */
 function limpiarFiltros() {
   // Restablecer valores de filtros
-  $("#filtro-equipo").val("");
-  $("#filtro-componente").val("");
-  $("#filtro-estado").val("");
+  $("#filtro-estado").val("pendiente");
+  $("#filtro-tipo").val("");
   $("#filtro-fecha-desde").val("");
   $("#filtro-fecha-hasta").val("");
 
-  // Limpiar filtros activos
-  filtrosAplicados = {};
+  // Actualizar filtros activos (mantener solo pendientes por defecto)
+  filtrosAplicados = {
+    estado: "pendiente",
+  };
 
   // Mostrar toast de información
-  if (window.showInfoToast) {
-    window.showInfoToast("Limpiando filtros...");
-  }
+  mostrarToast("info", "Filtros", "Filtros restablecidos");
 
   // Recargar tabla
   mantenimientosTable.ajax.reload();
-  
-  // Actualizar calendario si existe
-  if (calendario) {
-    calendario.refetchEvents();
-  }
 
   // Limpiar panel de detalles
   ocultarDetalleMantenimiento();
-  mantenimientoSeleccionado = null;
 }
 
 /**
- * Obtiene la unidad según el tipo de orómetro
- * @param {string} tipoOrometro - Tipo de orómetro (horas o kilometros)
- * @returns {string} - Unidad (hrs o km)
+ * Función para obtener la URL completa
+ * @param {string} path Ruta relativa
+ * @returns {string} URL completa
  */
-function getUnidadOrometro(tipoOrometro) {
-  return tipoOrometro && tipoOrometro.toLowerCase() === "kilometros"
-    ? "km"
-    : "hrs";
+function getUrl(path) {
+  // Obtener la ruta base del proyecto
+  const base = window.location.pathname.split("/modulos/")[0] + "/";
+
+  // Eliminar barras iniciales y finales
+  const cleanPath = path.replace(/^\/+|\/+$/g, "");
+
+  // Devolver la URL completa
+  return base + cleanPath;
 }
 
 /**
  * Capitaliza la primera letra de un texto
- * @param {string} texto - Texto a capitalizar
- * @returns {string} - Texto con la primera letra en mayúscula
+ * @param {string} texto Texto a capitalizar
+ * @returns {string} Texto con la primera letra en mayúscula
  */
-function capitalizarPrimeraLetra(string) {
-  if (!string) return string;
-  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+function capitalizarPrimeraLetra(texto) {
+  if (!texto) return "";
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 /**
  * Formatea un número para mostrar
- * @param {number} numero - Número a formatear
- * @returns {string} - Número formateado
+ * @param {number} numero  + texto.slice(1);
+}
+
+/**
+ * Formatea un número para mostrar
+ * @param {number} numero Número a formatear
+ * @returns {string} Número formateado
  */
 function formatearNumero(numero) {
   if (numero === null || numero === undefined) return "0";
@@ -1854,44 +1041,15 @@ function formatearNumero(numero) {
 }
 
 /**
- * Formatea una fecha para mostrar
- * @param {string} fecha - Fecha en formato ISO
- * @returns {string} - Fecha formateada
- */
-function formatearFecha(fecha) {
-  if (!fecha) return "";
-  const date = new Date(fecha);
-  return date.toLocaleString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-/**
- * Formatea una fecha para input datetime-local
- * @param {string} fecha - Fecha en formato ISO
- * @returns {string} - Fecha formateada para input
- */
-function formatearFechaInput(fecha) {
-  if (!fecha) return "";
-  const date = new Date(fecha);
-  return date.toISOString().slice(0, 16);
-}
-
-/**
  * Muestra un mensaje toast
- * @param {string} tipo - Tipo de mensaje (success, error, warning, info)
- * @param {string} titulo - Título del mensaje
- * @param {string} mensaje - Contenido del mensaje
- * @param {number} duracion - Duración en milisegundos (opcional)
+ * @param {string} tipo Tipo de mensaje (success, error, warning, info)
+ * @param {string} titulo Título del mensaje
+ * @param {string} mensaje Contenido del mensaje
  */
-function mostrarToast(tipo, titulo, mensaje, duracion) {
+function mostrarToast(tipo, titulo, mensaje) {
   // Verificar si existe la función showToast (del componente toast)
   if (typeof showToast === "function") {
-    showToast(tipo, titulo, mensaje, duracion);
+    showToast(tipo, titulo, mensaje);
   } else if (window.showSuccessToast && tipo === "success") {
     window.showSuccessToast(mensaje);
   } else if (window.showErrorToast && tipo === "error") {
@@ -1907,7 +1065,7 @@ function mostrarToast(tipo, titulo, mensaje, duracion) {
 /**
  * Muestra un indicador de carga
  */
-function showLoadingOverlay() {
+function mostrarCargando() {
   // Si existe un componente de carga, usarlo
   if (typeof window.showLoading === "function") {
     window.showLoading();
@@ -1917,43 +1075,9 @@ function showLoadingOverlay() {
 /**
  * Oculta el indicador de carga
  */
-function hideLoadingOverlay() {
+function ocultarCargando() {
   // Si existe un componente de carga, usarlo
   if (typeof window.hideLoading === "function") {
     window.hideLoading();
   }
-}
-
-/**
- * Verifica si el usuario tiene un permiso específico
- * @param {string} permiso - Permiso a verificar
- * @returns {boolean} - true si tiene el permiso, false en caso contrario
- */
-function tienePermiso(permiso) {
-  // Verificación basada en elementos del DOM
-  if (permiso === "mantenimientos.preventivo.crear") {
-    return $("#btn-nuevo-mantenimiento").length > 0;
-  } else if (permiso === "mantenimientos.preventivo.editar") {
-    return $("#btn-editar-desde-detalle").length > 0;
-  } else if (permiso === "mantenimientos.preventivo.completar") {
-    return $("#btn-completar-mantenimiento").length > 0;
-  }
-
-  return false;
-}
-
-// Añadir función showInfoToast si no existe
-if (!window.showInfoToast) {
-  window.showInfoToast = (msg) => {
-    console.log(msg);
-    // Si existe showSuccessToast, usarlo con un estilo diferente
-    if (window.showSuccessToast) {
-      try {
-        // Intentar llamar a la función con un tipo diferente
-        window.showSuccessToast(msg, "info");
-      } catch (e) {
-        console.log("Info toast:", msg);
-      }
-    }
-  };
 }
