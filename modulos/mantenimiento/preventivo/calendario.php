@@ -1,193 +1,212 @@
 <?php
-// Incluir archivos necesarios
+// Iniciar sesión
+session_start();
+
+// Incluir funciones
 require_once '../../../db/funciones.php';
-require_once '../../../db/conexion.php';
 
 // Verificar autenticación
-if (!estaAutenticado()) {
-    header("Location: ../../../login.php");
-    exit;
-}
+verificarAutenticacion();
 
-// Verificar permiso
-if (!tienePermiso('mantenimientos.preventivo.ver')) {
-    header("Location: ../../../dashboard.php?error=no_autorizado");
-    exit;
-}
+// Obtener datos del usuario
+$usuario = getUsuarioActual();
 
-// Obtener equipos para el formulario
-$conexion = new Conexion();
-$equipos = $conexion->select("SELECT id, nombre, codigo FROM equipos ORDER BY nombre");
+// Definir título de la página
+$titulo = "Calendario de Mantenimientos Preventivos | SIGESMANV1";
 
-// Obtener componentes para el formulario
-$componentes = $conexion->select("SELECT id, nombre, codigo FROM componentes ORDER BY nombre");
+// Definir la URL base para los assets
+$baseUrl = getProjectRoot();
 
-// Título de la página
-$titulo = "Calendario de Mantenimiento Preventivo";
-
-// Definir CSS y JS adicionales para este módulo
+// Incluir CSS adicional
 $css_adicional = [
-    'assets/plugins/datatables/css/datatables.min.css',
-    'assets/css/mantenimiento/preventivo/preventivo.css',
-    'assets/plugins/fullcalendar/main.min.css',
-    'componentes/image-viewer/image-viewer.css',
-    'componentes/toast/toast.css'
+    'assets/css/mantenimiento/preventivo/calendario.css',
 ];
 
+// Incluir JS adicional
 $js_adicional = [
-    'assets/js/jquery-3.7.1.min.js',
-    'assets/js/jquery.validate.min.js',
-    'assets/plugins/datatables/js/datatables.min.js',
-    'assets/plugins/fullcalendar/main.min.js',
-    'assets/plugins/fullcalendar/locales/es.js',
-    'componentes/ajax/ajax-utils.js',
-    'componentes/image-viewer/image-viewer.js',
-    'componentes/toast/toast.js',
+    'assets/js/vendor/fullcalendar/index.global.min.js',
     'assets/js/mantenimiento/preventivo/calendario.js'
 ];
 
-// Incluir el header
-$baseUrl = '../../../';
+// Incluir header
 include_once '../../../includes/header.php';
+
+// Incluir navbar
 include_once '../../../includes/navbar.php';
+
+// Incluir topbar
 include_once '../../../includes/topbar.php';
 ?>
 
-<div id="main-content" class="main-content">
-    <!-- Cabecera compacta -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h1 class="page-title"><?php echo $titulo; ?></h1>
-        <div class="d-flex">
-            <a href="<?php echo $baseUrl; ?>modulos/mantenimiento/preventivo/index.php" class="btn btn-sm btn-outline-primary me-2">
-                <i class="bi bi-table"></i> Ver Tabla
-            </a>
-            <?php if (tienePermiso('mantenimientos.preventivo.generar')): ?>
-                <button type="button" id="btn-generar-mantenimientos" class="btn-nuevo">
-                    <i class="bi bi-gear-fill"></i> Generar Mantenimientos
-                </button>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="filtros-container">
-        <div class="filtros-header">Filtros</div>
-        <div class="filtros-content">
-            <div class="filtro-grupo">
-                <label for="filtro-tipo" class="filtro-label">Tipo</label>
-                <select id="filtro-tipo" class="filtro-select">
-                    <option value="">Todos</option>
-                    <option value="equipo">Equipos</option>
-                    <option value="componente">Componentes</option>
-                </select>
-            </div>
-            <div class="filtro-grupo">
-                <label for="filtro-equipo" class="filtro-label">Equipo</label>
-                <select id="filtro-equipo" class="filtro-select">
-                    <option value="">Todos</option>
-                    <?php foreach ($equipos as $equipo): ?>
-                        <option value="<?php echo $equipo['id']; ?>"><?php echo htmlspecialchars($equipo['codigo'] . ' - ' . $equipo['nombre']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filtro-grupo">
-                <label for="filtro-componente" class="filtro-label">Componente</label>
-                <select id="filtro-componente" class="filtro-select">
-                    <option value="">Todos</option>
-                    <?php foreach ($componentes as $componente): ?>
-                        <option value="<?php echo $componente['id']; ?>"><?php echo htmlspecialchars($componente['codigo'] . ' - ' . $componente['nombre']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filtro-grupo">
-                <label for="filtro-estado" class="filtro-label">Estado</label>
-                <select id="filtro-estado" class="filtro-select">
-                    <option value="">Todos</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="completado">Completado</option>
-                </select>
-            </div>
-            <div class="filtros-actions">
-                <button id="btn-aplicar-filtros" class="btn-aplicar">
-                    <i class="bi bi-funnel"></i> Aplicar
-                </button>
-                <button id="btn-limpiar-filtros" class="btn-limpiar">
-                    <i class="bi bi-x"></i> Limpiar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Layout de dos columnas -->
-    <div class="calendario-layout">
-        <!-- Contenedor del calendario -->
-        <div class="calendario-container">
-            <div id="calendario-mantenimientos"></div>
-        </div>
-
-        <!-- Panel de detalles -->
-        <div id="preventivo-detalle" class="preventivo-detail-container">
-            <div class="detail-header">
-                <h2 class="detail-title">Detalles del Mantenimiento</h2>
-                <p class="detail-subtitle">Seleccione un mantenimiento para ver información</p>
-            </div>
-            <div class="detail-content">
-                <div class="detail-empty">
-                    <div class="detail-empty-icon">
-                        <i class="bi bi-tools"></i>
-                    </div>
-                    <div class="detail-empty-text">
-                        Seleccione un mantenimiento en el calendario para ver sus detalles
+<!-- Contenido principal -->
+<div class="main-content" id="main-content">
+    <div class="container-fluid">
+        <!-- Encabezado de la página -->
+        <div class="page-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-title">Calendario de Mantenimientos Preventivos</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="<?php echo getPageUrl('dashboard.php'); ?>">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo/index.php'); ?>">Mantenimiento Preventivo</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Calendario</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="col-auto">
+                    <div class="page-actions">
+                        <a href="<?php echo getPageUrl('modulos/mantenimiento/preventivo/index.php'); ?>" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Volver
+                        </a>
+                        <button id="refreshCalendar" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal para completar mantenimiento -->
-    <div class="modal fade" id="modal-completar-mantenimiento" tabindex="-1" aria-labelledby="modal-completar-titulo" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modal-completar-titulo">Completar Mantenimiento Preventivo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="form-completar-mantenimiento">
-                        <input type="hidden" id="mantenimiento-id" name="id">
-
-                        <div class="form-group mb-3">
-                            <label for="mantenimiento-orometro" class="form-label">Orómetro Actual <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" min="0" class="form-control" id="mantenimiento-orometro" name="orometro_actual" required>
-                                <span class="input-group-text" id="unidad-orometro">hrs</span>
+        <!-- Layout principal -->
+        <div class="calendario-layout">
+            <!-- Tarjeta del calendario -->
+            <div class="calendario-container">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title">Calendario de Mantenimientos</h5>
                             </div>
-                            <div class="form-text">Ingrese el valor actual del orómetro.</div>
+                            <div class="col-auto">
+                                <div class="calendar-legend">
+                                    <div class="legend-item">
+                                        <div class="legend-color bg-warning"></div>
+                                        <span>Pendiente</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color bg-info"></div>
+                                        <span>Completado</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label for="mantenimiento-observaciones" class="form-label">Observaciones</label>
-                            <textarea class="form-control" id="mantenimiento-observaciones" name="observaciones" rows="3"></textarea>
-                        </div>
-                    </form>
+                    </div>
+                    <div class="card-body">
+                        <div id="preventiveMaintenanceCalendar"></div>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" id="btn-guardar-completar" class="btn btn-success">
-                        <i class="bi bi-check-lg"></i> Completar
-                    </button>
+            </div>
+
+            <!-- Panel lateral de mantenimientos -->
+            <div class="mantenimientos-panel">
+                <!-- Próximos mantenimientos -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Próximos Mantenimientos
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover" id="proximosMantenimientosTable">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Equipo</th>
+                                        <th>Fecha</th>
+                                        <th>Días</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="4" class="text-center">Cargando datos...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mantenimientos recientes -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="bi bi-check2-circle me-2"></i>
+                            Mantenimientos Recientes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover" id="mantenimientosRecientesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Equipo</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="3" class="text-center">Cargando datos...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Componente de visualización de imágenes -->
-    <?php include_once '../../../componentes/image-viewer/image-viewer.php'; ?>
+<!-- Modal para detalles del mantenimiento -->
+<div class="modal fade" id="maintenanceDetailsModal" tabindex="-1" aria-labelledby="maintenanceDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="maintenanceDetailsModalLabel">Detalles del Mantenimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="maintenance-details">
+                    <div class="row mb-3">
+                        <div class="col-4 fw-bold">Equipo:</div>
+                        <div class="col-8" id="modalEquipo"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4 fw-bold">Descripción:</div>
+                        <div class="col-8" id="modalDescripcion"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4 fw-bold">Fecha Programada:</div>
+                        <div class="col-8" id="modalFechaProgramada"></div>
+                    </div>
+                    <div class="row mb-3" id="rowFechaRealizada">
+                        <div class="col-4 fw-bold">Fecha Realizada:</div>
+                        <div class="col-8" id="modalFechaRealizada"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4 fw-bold">Estado:</div>
+                        <div class="col-8">
+                            <span class="badge" id="modalEstado"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-3" id="rowObservaciones">
+                        <div class="col-4 fw-bold">Observaciones:</div>
+                        <div class="col-8" id="modalObservaciones"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <a href="#" class="btn btn-primary" id="btnVerDetalle">Ver Detalle Completo</a>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Componente de notificaciones toast -->
-    <?php include_once '../../../componentes/toast/toast.php'; ?>
-
-    <?php
-    // Incluir el footer
-    include_once '../../../includes/footer.php';
-    ?>
+<?php
+// Incluir footer
+include_once '../../../includes/footer.php';
+?>

@@ -424,11 +424,11 @@ function obtenerEventosCalendario($conexion)
         // 1. Obtener mantenimientos preventivos pendientes
         $preventivos = $conexion->select(
             "SELECT mp.id, e.nombre as equipo_nombre, mp.descripcion_razon as descripcion, 
-                    mp.fecha_hora_programada as fecha, 'preventivo' as tipo, 'pendiente' as estado
+                    mp.fecha_programada as fecha, 'preventivo' as tipo, 'pendiente' as estado
              FROM mantenimiento_preventivo mp
              LEFT JOIN equipos e ON mp.equipo_id = e.id
-             WHERE mp.estado = 'pendiente' AND mp.fecha_hora_programada >= CURDATE() - INTERVAL 30 DAY
-             ORDER BY mp.fecha_hora_programada
+             WHERE mp.estado = 'pendiente' AND mp.fecha_programada >= CURDATE() - INTERVAL 30 DAY
+             ORDER BY mp.fecha_programada
              LIMIT 50"
         );
 
@@ -468,11 +468,11 @@ function obtenerEventosCalendario($conexion)
         // 3. Obtener mantenimientos programados (predictivos) pendientes
         $programados = $conexion->select(
             "SELECT mp.id, e.nombre as equipo_nombre, mp.descripcion_razon as descripcion, 
-                    mp.fecha_hora_programada as fecha, 'predictivo' as tipo, 'pendiente' as estado
+                    mp.fecha_programada as fecha, 'predictivo' as tipo, 'pendiente' as estado
              FROM mantenimiento_programado mp
              LEFT JOIN equipos e ON mp.equipo_id = e.id
-             WHERE mp.estado = 'pendiente' AND mp.fecha_hora_programada >= CURDATE() - INTERVAL 30 DAY
-             ORDER BY mp.fecha_hora_programada
+             WHERE mp.estado = 'pendiente' AND mp.fecha_programada >= CURDATE() - INTERVAL 30 DAY
+             ORDER BY mp.fecha_programada
              LIMIT 50"
         );
 
@@ -542,10 +542,10 @@ function obtenerProximosMantenimientos($conexion)
         // Consulta para obtener próximos mantenimientos (combinando preventivos, correctivos y programados)
         $query = "
             (SELECT 'preventivo' as tipo, mp.id, e.nombre as equipo, mp.descripcion_razon as descripcion,
-                    mp.fecha_hora_programada as fecha, mp.estado
+                    mp.fecha_programada as fecha, mp.estado
              FROM mantenimiento_preventivo mp
              LEFT JOIN equipos e ON mp.equipo_id = e.id
-             WHERE mp.estado = 'pendiente' AND mp.fecha_hora_programada >= CURDATE())
+             WHERE mp.estado = 'pendiente' AND mp.fecha_programada >= CURDATE())
             UNION
             (SELECT 'correctivo' as tipo, mc.id, e.nombre as equipo, mc.descripcion_problema as descripcion,
                     mc.fecha_hora_problema as fecha, mc.estado
@@ -554,10 +554,10 @@ function obtenerProximosMantenimientos($conexion)
              WHERE mc.estado = 'pendiente' AND mc.fecha_hora_problema >= CURDATE())
             UNION
             (SELECT 'predictivo' as tipo, mp.id, e.nombre as equipo, mp.descripcion_razon as descripcion,
-                    mp.fecha_hora_programada as fecha, mp.estado
+                    mp.fecha_programada as fecha, mp.estado
              FROM mantenimiento_programado mp
              LEFT JOIN equipos e ON mp.equipo_id = e.id
-             WHERE mp.estado = 'pendiente' AND mp.fecha_hora_programada >= CURDATE())
+             WHERE mp.estado = 'pendiente' AND mp.fecha_programada >= CURDATE())
             ORDER BY fecha
             LIMIT 10
         ";

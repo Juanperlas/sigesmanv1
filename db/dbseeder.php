@@ -307,7 +307,7 @@ foreach ($roles_permisos as $rp) {
 echo "Poblando usuarios...\n";
 
 // Insertar superadmin con creado_por NULL
-$superadmin = ['superadmin', encriptarContrasena('password123'), 'Super Administrador', 'superadmin@sigesman.com', '12345678', '987654321', 'Av. Principal 123', 'Administración', 'images/usuarios/superadmin.jpg', null, null, 1];
+$superadmin = ['superadmin', encriptarContrasena('password123'), 'Super Administrador', 'superadmin@sigesman.com', '12345678', '987654321', 'Av. Principal 123', 'Administración', null, null, null, 1];
 ejecutarConsulta($pdo, "INSERT INTO usuarios (username, contrasena, nombre_completo, correo, dni, telefono, direccion, area, fotografia, creado_por, token_recordatorio, esta_activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", $superadmin);
 $superadmin_id = ultimoId($pdo);
 
@@ -315,7 +315,7 @@ $superadmin_id = ultimoId($pdo);
 $usuarios = [
     ['admin1', encriptarContrasena('password123'), 'Admin Uno', 'admin1@sigesman.com', '87654321', '912345678', 'Calle Secundaria 456', 'Administración', null, $superadmin_id, null, 1],
     ['admin2', encriptarContrasena('password123'), 'Admin Dos', 'admin2@sigesman.com', '87654322', '912345679', 'Calle Secundaria 789', 'Administración', null, $superadmin_id, null, 1],
-    ['jefe1', encriptarContrasena('password123'), 'Jefe Operaciones', 'jefe1@sigesman.com', '45678912', '923456789', 'Av. Mina 789', 'Operaciones', 'images/usuarios/jefe1.jpg', $superadmin_id, null, 1],
+    ['jefe1', encriptarContrasena('password123'), 'Jefe Operaciones', 'jefe1@sigesman.com', '45678912', '923456789', 'Av. Mina 789', 'Operaciones', null, $superadmin_id, null, 1],
     ['jefe2', encriptarContrasena('password123'), 'Jefe Mantenimiento', 'jefe2@sigesman.com', '45678913', '923456790', 'Av. Planta 101', 'Mantenimiento', null, $superadmin_id, null, 1],
     ['tecnico1', encriptarContrasena('password123'), 'Técnico Uno', 'tecnico1@sigesman.com', '78912345', '934567890', 'Calle Taller 202', 'Mantenimiento', null, $superadmin_id, null, 1],
     ['tecnico2', encriptarContrasena('password123'), 'Técnico Dos', 'tecnico2@sigesman.com', '78912346', '934567891', 'Calle Taller 303', 'Mantenimiento', null, $superadmin_id, null, 1],
@@ -373,10 +373,10 @@ foreach ($sesiones as $sesion) {
 // 8. Poblar tabla personal
 echo "Poblando personal...\n";
 $personal = [
-    ['Juan Pérez', '11223344', '987123456', 'Calle Mina 123', 'Mantenimiento', '2024-01-15', null, 'images/personal/juan.jpg', 1, $usuario_ids[0]],
+    ['Juan Pérez', '11223344', '987123456', 'Calle Mina 123', 'Mantenimiento', '2024-01-15', null, null, 1, $usuario_ids[0]],
     ['María Gómez', '44332211', '987654123', 'Av. Planta 456', 'Operaciones', '2023-06-20', null, null, 1, $usuario_ids[0]],
     ['Pedro Sánchez', '55667788', '912345678', null, 'Logística', '2022-03-10', '2025-01-01', null, 0, $usuario_ids[0]],
-    ['Ana López', '66778899', '923456789', 'Calle Taller 789', 'Mantenimiento', '2023-09-01', null, 'images/personal/ana.jpg', 1, $usuario_ids[0]],
+    ['Ana López', '66778899', '923456789', 'Calle Taller 789', 'Mantenimiento', '2023-09-01', null, null, 1, $usuario_ids[0]],
     ['Carlos Ruiz', '77889900', '934567890', 'Av. Principal 101', 'Operaciones', '2022-12-15', null, null, 1, $usuario_ids[0]],
     ['Sofía Torres', '88990011', '945678901', null, 'Administración', '2024-03-01', null, null, 1, $usuario_ids[0]],
     ['Luis Fernández', '99001122', '956789012', 'Calle Secundaria 202', 'Logística', '2023-01-20', '2025-02-01', null, 0, $usuario_ids[0]],
@@ -412,7 +412,7 @@ $equipos = [
     [$categoria_ids['Pesados'], 'EQP-001', 'Camión Minero', 'general', 'Caterpillar', 'CAT 797', 'SER001', '200 ton', null, 'Planta 1', 'activo', 1500.50, 1000.00, 2000.00, 10.00, 100.00, 1000.00, 'Equipo operativo', null, 'kilometros'],
     [$categoria_ids['Livianos'], 'EQP-002', 'Jeep Todo Terreno', 'general', 'Jeep', 'Wrangler', 'SER002', '4x4', null, 'Mina Norte', 'mantenimiento', 500.75, 300.00, 1000.00, 10.00, 50.00, 500.00, 'En taller', null, 'kilometros'],
     [$categoria_ids['Eléctricos'], 'EQP-003', 'Generador', 'general', 'Cummins', 'G500', 'SER003', '500 kW', null, 'Taller Central', 'descanso', 300.25, 200.00, 800.00, 10.00, 200.00, 1500.00, 'En reserva', null, 'horas'],
-    [$categoria_ids['Pesados'], 'EQP-004', 'Pala Hidráulica', 'general', 'Komatsu', 'PC4000', 'SER004', '400 ton', null, 'Mina Sur', 'averiado', 900.00, 600.00, 1500.00, 10.00, 150.00, 1200.00, 'Fallo en brazo', 'images/equipos/pala.jpg', 'horas'],
+    [$categoria_ids['Pesados'], 'EQP-004', 'Pala Hidráulica', 'general', 'Komatsu', 'PC4000', 'SER004', '400 ton', null, 'Mina Sur', 'averiado', 900.00, 600.00, 1500.00, 10.00, 150.00, 1200.00, 'Fallo en brazo', null, 'horas'],
     [$categoria_ids['Estacionarios'], 'EQP-005', 'Planta Chancadora', 'chancadora', 'Metso', 'C200', 'SER005', '500 ton/h', null, 'Planta 1', 'vendido', 200.00, 100.00, null, 10.00, 300.00, 2000.00, 'Vendido en 2025', null, 'horas'],
     [$categoria_ids['Máquinas'], 'EQP-006', 'Perforadora Principal', 'maquina', 'Caterpillar', 'D10', 'SER006', null, null, 'Mina Norte', 'activo', 1200.00, 800.00, 2000.00, 10.00, 100.00, 1000.00, 'Máquina en buen estado', null, 'horas'],
     [$categoria_ids['Máquinas'], 'EQP-007', 'Cargador Frontal', 'maquina', 'Komatsu', 'WA500', 'SER007', null, null, 'Taller Central', 'mantenimiento', 800.50, 500.00, 1500.00, 10.00, 50.00, 800.00, 'En revisión', null, 'horas'],
@@ -573,7 +573,7 @@ $mantenimientos_preventivos = [
 
 $mantenimiento_preventivo_ids = [];
 foreach ($mantenimientos_preventivos as $mp) {
-    ejecutarConsulta($pdo, "INSERT INTO mantenimiento_preventivo (equipo_id, componente_id, descripcion_razon, fecha_hora_programada, orometro_programado, estado, fecha_realizado, observaciones, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", $mp);
+    ejecutarConsulta($pdo, "INSERT INTO mantenimiento_preventivo (equipo_id, componente_id, descripcion_razon, fecha_programada, orometro_programado, estado, fecha_realizado, observaciones, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", $mp);
     $mantenimiento_preventivo_ids[] = ultimoId($pdo);
 }
 
@@ -599,7 +599,7 @@ $mantenimientos_programados = [
 
 $mantenimiento_programado_ids = [];
 foreach ($mantenimientos_programados as $mp) {
-    ejecutarConsulta($pdo, "INSERT INTO mantenimiento_programado (equipo_id, componente_id, descripcion_razon, fecha_hora_programada, orometro_programado, estado, fecha_realizado, observaciones, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", $mp);
+    ejecutarConsulta($pdo, "INSERT INTO mantenimiento_programado (equipo_id, componente_id, descripcion_razon, fecha_programada, orometro_programado, estado, fecha_realizado, observaciones, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", $mp);
     $mantenimiento_programado_ids[] = ultimoId($pdo);
 }
 

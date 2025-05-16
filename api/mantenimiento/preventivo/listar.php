@@ -37,15 +37,13 @@ $search = isset($_POST["search"]["value"]) ? $_POST["search"]["value"] : "";
 $orderColumn = isset($_POST["order"][0]["column"]) ? intval($_POST["order"][0]["column"]) : 0;
 $orderDir = isset($_POST["order"][0]["dir"]) ? $_POST["order"][0]["dir"] : "asc";
 
-// Mapeo de columnas para ordenamiento (corregido para evitar ambigüedad)
+// Mapeo de columnas para ordenamiento
 $columns = [
-    "mp.fecha_hora_programada",
+    "mp.fecha_programada",
     "tipo_item",
     "codigo_item",
-    "nombre_item",
-    "mp.descripcion_razon",
     "orometro_actual_valor",
-    "mp.orometro_programado",
+    "proximo_orometro_valor",
     "mp.estado"
 ];
 
@@ -70,13 +68,13 @@ if (isset($_POST["tipo"]) && $_POST["tipo"] !== "") {
 
 // Filtro por fecha desde
 if (isset($_POST["fecha_desde"]) && $_POST["fecha_desde"] !== "") {
-    $filtros[] = "DATE(mp.fecha_hora_programada) >= ?";
+    $filtros[] = "DATE(mp.fecha_programada) >= ?";
     $params[] = $_POST["fecha_desde"];
 }
 
 // Filtro por fecha hasta
 if (isset($_POST["fecha_hasta"]) && $_POST["fecha_hasta"] !== "") {
-    $filtros[] = "DATE(mp.fecha_hora_programada) <= ?";
+    $filtros[] = "DATE(mp.fecha_programada) <= ?";
     $params[] = $_POST["fecha_hasta"];
 }
 
@@ -127,11 +125,12 @@ try {
             mp.equipo_id,
             mp.componente_id,
             mp.descripcion_razon as descripcion,
-            mp.fecha_hora_programada,
-            mp.orometro_programado as proximo_orometro,
+            mp.fecha_programada,
+            mp.orometro_programado,
             mp.estado,
             mp.fecha_realizado,
             mp.observaciones,
+            mp.imagen,
             CASE 
                 WHEN mp.equipo_id IS NOT NULL THEN 'equipo'
                 ELSE 'componente'
@@ -141,10 +140,6 @@ try {
                 ELSE c.codigo
             END as codigo_item,
             CASE 
-                WHEN mp.equipo_id IS NOT NULL THEN e.nombre
-                ELSE c.nombre
-            END as nombre_item,
-            CASE 
                 WHEN mp.equipo_id IS NOT NULL THEN e.orometro_actual
                 ELSE c.orometro_actual
             END as orometro_actual_valor,
@@ -153,6 +148,10 @@ try {
                 ELSE c.anterior_orometro
             END as anterior_orometro_valor,
             CASE 
+                WHEN mp.equipo_id IS NOT NULL THEN e.proximo_orometro
+                ELSE c.proximo_orometro
+            END as proximo_orometro_valor,
+            CASE 
                 WHEN mp.equipo_id IS NOT NULL THEN e.tipo_orometro
                 ELSE c.tipo_orometro
             END as tipo_orometro,
@@ -160,7 +159,10 @@ try {
                 WHEN mp.equipo_id IS NOT NULL THEN e.limite
                 ELSE c.limite
             END as limite_valor,
-            DATEDIFF(mp.fecha_hora_programada, NOW()) as dias_restantes
+            CASE 
+                WHEN mp.equipo_id IS NOT NULL THEN e.imagen
+                ELSE c.imagen
+            END as item_imagen
         FROM mantenimiento_preventivo mp
         LEFT JOIN equipos e ON mp.equipo_id = e.id
         LEFT JOIN componentes c ON mp.componente_id = c.id
@@ -171,7 +173,7 @@ try {
     if (isset($columns[$orderColumn])) {
         $sql .= " ORDER BY {$columns[$orderColumn]} $orderDir";
     } else {
-        $sql .= " ORDER BY mp.fecha_hora_programada ASC";
+        $sql .= " ORDER BY mp.fecha_programada ASC";
     }
 
     // Aplicar paginación
@@ -184,18 +186,19 @@ try {
     $data = [];
     foreach ($mantenimientos as $row) {
         // Calcular días restantes basados en el límite diario
-        $diasRestantesCalculados = null;
+        $diasRestantes = null;
         if (!empty($row["limite_valor"]) && $row["limite_valor"] > 0) {
             $orometroActual = floatval($row["orometro_actual_valor"]);
-            $proximoOrometro = floatval($row["proximo_orometro"]);
+            $proximoOrometro = floatval($row["proximo_orometro_valor"]);
             $limiteDiario = floatval($row["limite_valor"]);
 
             $diferenciaOrometros = $proximoOrometro - $orometroActual;
-            $diasRestantesCalculados = ceil($diferenciaOrometros / $limiteDiario);
+            $diasRestantes = ceil($diferenciaOrometros / $limiteDiario);
+        } else {
+            // Fallback: Calcular días restantes desde la fecha programada
+            $diasRestantes = floor((strtotime($row["fecha_programada"]) - time()) / (60 * 60 * 24));
         }
 
-        // Usar días restantes calculados si están disponibles, de lo contrario usar los de la base de datos
-        $diasRestantes = $diasRestantesCalculados !== null ? $diasRestantesCalculados : $row["dias_restantes"];
         $esFechaFutura = $diasRestantes >= 0;
 
         if ($esFechaFutura) {
@@ -212,7 +215,7 @@ try {
 
         // Calcular progreso del orómetro
         $orometroActual = floatval($row["orometro_actual_valor"]);
-        $proximoOrometro = floatval($row["proximo_orometro"]);
+        $proximoOrometro = floatval($row["proximo_orometro_valor"]);
         $anteriorOrometro = floatval($row["anterior_orometro_valor"]);
 
         // Calcular progreso
@@ -251,23 +254,47 @@ try {
         }
 
         // Formatear fecha
-        $fechaFormateada = date("d/m/Y", strtotime($row["fecha_hora_programada"]));
+        $fechaFormateada = date("d/m/Y", strtotime($row["fecha_programada"]));
 
         // Formatear orómetro
         $unidad = $row["tipo_orometro"] === "horas" ? "hrs" : "km";
         $orometroActualFormateado = number_format($orometroActual, 2) . " " . $unidad;
         $proximoOrometroFormateado = number_format($proximoOrometro, 2) . " " . $unidad;
 
+        /* Preparar imagen
+        $imagenUrl = "";
+        if ($row["estado"] === "completado" && !empty($row["imagen"])) {
+            $imagenUrl = getAssetUrl($row["imagen"]);
+        } elseif (!empty($row["item_imagen"])) {
+            $imagenUrl = getAssetUrl($row["item_imagen"]);
+        } else {
+            $imagenUrl = getAssetUrl(
+                $row["tipo_item"] === "equipo"
+                    ? "assets/img/equipos/equipos/default.png"
+                    : "assets/img/equipos/componentes/default.png"
+            );
+        }*/
+
+        $imagenUrl = "";
+        if (!empty($row["item_imagen"])) {
+            $imagenUrl = getAssetUrl($row["item_imagen"]);
+        } else {
+            $imagenUrl = getAssetUrl(
+                $row["tipo_item"] === "equipo"
+                    ? "assets/img/equipos/equipos/default.png"
+                    : "assets/img/equipos/componentes/default.png"
+            );
+        }
+
         // Agregar datos a la respuesta
         $data[] = [
             "id" => $row["id"],
             "equipo_id" => $row["equipo_id"],
             "componente_id" => $row["componente_id"],
-            "tipo" => $row["tipo_item"],
-            "codigo_equipo" => $row["codigo_item"],
-            "nombre_equipo" => $row["nombre_item"],
+            "tipo_item" => $row["tipo_item"],
+            "codigo_item" => $row["codigo_item"],
             "descripcion" => $row["descripcion"],
-            "fecha_programada" => $row["fecha_hora_programada"],
+            "fecha_programada" => $row["fecha_programada"],
             "fecha_formateada" => $fechaFormateada,
             "orometro_actual" => $orometroActualFormateado,
             "orometro_actual_valor" => $orometroActual,
@@ -280,7 +307,8 @@ try {
             "es_fecha_futura" => $esFechaFutura,
             "progreso" => $progreso,
             "progreso_clase" => $progresoClase,
-            "anterior_orometro" => $anteriorOrometro
+            "anterior_orometro" => $anteriorOrometro,
+            "imagen" => $imagenUrl
         ];
     }
 

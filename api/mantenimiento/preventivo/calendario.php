@@ -1,186 +1,256 @@
 <?php
-// Incluir archivos necesarios
-require_once '../../../db/funciones.php';
+// Iniciar sesión
+session_start();
+
+// Incluir funciones y conexión a la base de datos
 require_once '../../../db/conexion.php';
-
-// Verificar si es una solicitud AJAX
-$esAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
-if (!$esAjax) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Acceso no permitido']);
-    exit;
-}
+require_once '../../../db/funciones.php';
 
 // Verificar autenticación
 if (!estaAutenticado()) {
-    http_response_code(401);
+    header('Content-Type: application/json');
     echo json_encode(['error' => 'No autenticado']);
     exit;
 }
 
-// Verificar permiso
-if (!tienePermiso('mantenimientos.preventivo.ver')) {
-    http_response_code(403);
-    echo json_encode(['error' => 'No tiene permisos para ver mantenimientos preventivos']);
-    exit;
-}
+// Obtener parámetros
+$tipo = isset($_GET['tipo']) ? $_GET['tipo'] : 'eventos';
+$start = isset($_GET['start']) ? $_GET['start'] : null;
+$end = isset($_GET['end']) ? $_GET['end'] : null;
 
-// Parámetros de filtrado
-$start = isset($_GET['start']) ? $_GET['start'] : date('Y-m-d', strtotime('-1 month'));
-$end = isset($_GET['end']) ? $_GET['end'] : date('Y-m-d', strtotime('+2 months'));
-$equipoId = isset($_GET['equipo_id']) ? intval($_GET['equipo_id']) : null;
-$componenteId = isset($_GET['componente_id']) ? intval($_GET['componente_id']) : null;
-$estado = isset($_GET['estado']) ? $_GET['estado'] : null;
+// Crear conexión a la base de datos
+$conexion = new Conexion();
 
+// Procesar según el tipo de solicitud
 try {
-    // Conexión a la base de datos
-    $conexion = new Conexion();
-
-    // Construir la consulta SQL
-    $sql = "SELECT mp.*, 
-            e.codigo as equipo_codigo, e.nombre as equipo_nombre, e.tipo_orometro as equipo_tipo_orometro,
-            c.codigo as componente_codigo, c.nombre as componente_nombre, c.tipo_orometro as componente_tipo_orometro
-            FROM mantenimiento_preventivo mp
-            LEFT JOIN equipos e ON mp.equipo_id = e.id
-            LEFT JOIN componentes c ON mp.componente_id = c.id
-            WHERE 1=1";
-
-    $params = [];
-
-    // Filtrar por fecha
-    if ($start) {
-        $sql .= " AND (mp.fecha_hora_programada >= ? OR mp.fecha_hora_programada IS NULL)";
-        $params[] = $start;
+    $resultado = [];
+    
+    switch ($tipo) {
+        case 'proximos':
+            $resultado = obtenerProximosMantenimientos($conexion);
+            break;
+        case 'recientes':
+            $resultado = obtenerMantenimientosRecientes($conexion);
+            break;
+        default:
+            $resultado = obtenerEventosCalendario($conexion, $start, $end);
+            break;
     }
     
-    if ($end) {
-        $sql .= " AND (mp.fecha_hora_programada <= ? OR mp.fecha_hora_programada IS NULL)";
-        $params[] = $end;
+    // Devolver los datos en formato JSON
+    header('Content-Type: application/json');
+    echo json_encode($resultado);
+} catch (Exception $e) {
+    // Registrar el error
+    error_log("Error en calendario.php: " . $e->getMessage());
+    
+    // Devolver un mensaje de error
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Error al procesar la solicitud: ' . $e->getMessage()]);
+}
+
+/**
+ * Obtiene los eventos de mantenimiento preventivo para el calendario
+ */
+function obtenerEventosCalendario($conexion, $start = null, $end = null) {
+    // Construir condición de fecha si se proporcionan parámetros
+    $whereDate = "";
+    $params = [];
+    
+    if ($start && $end) {
+        $whereDate = "AND (
+            (mp.estado = 'pendiente' AND mp.fecha_programada BETWEEN ? AND ?) OR
+            (mp.estado = 'completado' AND mp.fecha_realizado BETWEEN ? AND ?)
+        )";
+        $params = [$start, $end, $start, $end];
     }
-
-    // Filtrar por equipo
-    if ($equipoId) {
-        $sql .= " AND mp.equipo_id = ?";
-        $params[] = $equipoId;
+    
+    // Consulta para obtener mantenimientos preventivos
+    $query = "
+        SELECT 
+            mp.id,
+            mp.equipo_id,
+            mp.componente_id,
+            e.codigo as codigo,
+            c.codigo as codigo_componente,
+            e.nombre as equipo_nombre,
+            c.nombre as componente_nombre,
+            mp.descripcion_razon,
+            mp.fecha_programada,
+            mp.fecha_realizado,
+            mp.estado,
+            mp.observaciones
+        FROM 
+            mantenimiento_preventivo mp
+        LEFT JOIN 
+            equipos e ON mp.equipo_id = e.id
+        LEFT JOIN 
+            componentes c ON mp.componente_id = c.id
+        WHERE 
+            1=1 $whereDate
+        ORDER BY 
+            CASE 
+                WHEN mp.estado = 'pendiente' THEN mp.fecha_programada
+                ELSE mp.fecha_realizado
+            END
+    ";
+    
+    $mantenimientos = $conexion->select($query, $params);
+    
+    // Si no hay resultados, devolver array vacío
+    if (!$mantenimientos) {
+        return [];
     }
-
-    // Filtrar por componente
-    if ($componenteId) {
-        $sql .= " AND mp.componente_id = ?";
-        $params[] = $componenteId;
-    }
-
-    // Filtrar por estado
-    if ($estado) {
-        $sql .= " AND mp.estado = ?";
-        $params[] = $estado;
-    }
-
-    // Ordenar por fecha
-    $sql .= " ORDER BY mp.fecha_hora_programada ASC";
-
-    // Ejecutar la consulta
-    $mantenimientos = $conexion->select($sql, $params);
-
-    // Preparar eventos para el calendario
+    
+    // Procesar los resultados
     $eventos = [];
     foreach ($mantenimientos as $mantenimiento) {
-        // Determinar si es equipo o componente
-        $esEquipo = !empty($mantenimiento['equipo_id']);
-        $codigo = $esEquipo ? $mantenimiento['equipo_codigo'] : $mantenimiento['componente_codigo'];
-        $nombre = $esEquipo ? $mantenimiento['equipo_nombre'] : $mantenimiento['componente_nombre'];
-        $tipoOrometro = $esEquipo ? $mantenimiento['equipo_tipo_orometro'] : $mantenimiento['componente_tipo_orometro'];
-        $unidad = $tipoOrometro == 'horas' ? 'hrs' : 'km';
+        // Determinar el nombre del equipo/componente
+        $nombre = $mantenimiento['equipo_nombre'] ?: 
+                 ($mantenimiento['componente_nombre'] ?: 'Sin nombre');
         
-        // Determinar color según estado
-        $color = '#4361ee'; // Azul para preventivo
-        $textColor = '#ffffff';
+        // Determinar el código
+        $codigo = $mantenimiento['codigo'] ?: 
+                 ($mantenimiento['codigo_componente'] ?: 'Sin código');
         
-        if ($mantenimiento['estado'] === 'completado') {
-            $color = '#c8c8c8'; // Gris para completado
-            $textColor = '#333333';
-        }
-        
-        // Determinar fecha del evento
-        $fechaEvento = $mantenimiento['fecha_hora_programada'];
-        
-        // Si no hay fecha programada, calcular fecha estimada
-        if (empty($fechaEvento)) {
-            // Obtener orómetro actual y límite diario
-            if ($esEquipo) {
-                $equipo = $conexion->selectOne(
-                    "SELECT orometro_actual, limite FROM equipos WHERE id = ?", 
-                    [$mantenimiento['equipo_id']]
-                );
-                
-                if ($equipo && $equipo['limite'] > 0) {
-                    $orometroActual = $equipo['orometro_actual'];
-                    $limiteDiario = $equipo['limite'];
-                    
-                    // Calcular días estimados
-                    $tiempoRestante = $mantenimiento['orometro_programado'] - $orometroActual;
-                    $diasEstimados = ceil($tiempoRestante / $limiteDiario);
-                    
-                    // Calcular fecha estimada
-                    $fechaEvento = date('Y-m-d', strtotime("+$diasEstimados days"));
-                } else {
-                    // Si no hay límite, usar fecha actual
-                    $fechaEvento = date('Y-m-d');
-                }
-            } else {
-                $componente = $conexion->selectOne(
-                    "SELECT orometro_actual, limite FROM componentes WHERE id = ?", 
-                    [$mantenimiento['componente_id']]
-                );
-                
-                if ($componente && $componente['limite'] > 0) {
-                    $orometroActual = $componente['orometro_actual'];
-                    $limiteDiario = $componente['limite'];
-                    
-                    // Calcular días estimados
-                    $tiempoRestante = $mantenimiento['orometro_programado'] - $orometroActual;
-                    $diasEstimados = ceil($tiempoRestante / $limiteDiario);
-                    
-                    // Calcular fecha estimada
-                    $fechaEvento = date('Y-m-d', strtotime("+$diasEstimados days"));
-                } else {
-                    // Si no hay límite, usar fecha actual
-                    $fechaEvento = date('Y-m-d');
-                }
-            }
-        }
-        
-        // Crear evento para el calendario
-        $evento = [
+        // Crear evento
+        $eventos[] = [
             'id' => $mantenimiento['id'],
-            'title' => ($esEquipo ? 'Equipo: ' : 'Componente: ') . $codigo . ' - ' . $nombre,
-            'start' => $fechaEvento,
-            'backgroundColor' => $color,
-            'borderColor' => $color,
-            'textColor' => $textColor,
-            'extendedProps' => [
-                'tipo' => 'preventivo',
-                'estado' => $mantenimiento['estado'],
-                'orometro' => $mantenimiento['orometro_programado'] . ' ' . $unidad,
-                'descripcion' => $mantenimiento['descripcion_razon'],
-                'observaciones' => $mantenimiento['observaciones'],
-                'esEquipo' => $esEquipo,
-                'equipoId' => $mantenimiento['equipo_id'],
-                'componenteId' => $mantenimiento['componente_id'],
-                'fechaEstimada' => empty($mantenimiento['fecha_hora_programada'])
-            ],
-            'allDay' => true
+            'equipo_id' => $mantenimiento['equipo_id'],
+            'componente_id' => $mantenimiento['componente_id'],
+            'equipo_nombre' => $nombre,
+            'codigo' => $codigo,
+            'descripcion_razon' => $mantenimiento['descripcion_razon'],
+            'fecha_programada' => $mantenimiento['fecha_programada'],
+            'fecha_realizado' => $mantenimiento['fecha_realizado'],
+            'estado' => $mantenimiento['estado'],
+            'observaciones' => $mantenimiento['observaciones']
         ];
-        
-        $eventos[] = $evento;
     }
+    
+    return $eventos;
+}
 
-    // Enviar respuesta
-    header('Content-Type: application/json');
-    echo json_encode($eventos);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Error al obtener eventos del calendario: ' . $e->getMessage()]);
+/**
+ * Obtiene los próximos 5 mantenimientos preventivos pendientes
+ */
+function obtenerProximosMantenimientos($conexion) {
+    $query = "
+        SELECT 
+            mp.id,
+            mp.equipo_id,
+            mp.componente_id,
+            e.codigo as codigo,
+            c.codigo as codigo_componente,
+            e.nombre as equipo_nombre,
+            c.nombre as componente_nombre,
+            mp.descripcion_razon,
+            mp.fecha_programada,
+            DATEDIFF(mp.fecha_programada, CURDATE()) as dias_restantes
+        FROM 
+            mantenimiento_preventivo mp
+        LEFT JOIN 
+            equipos e ON mp.equipo_id = e.id
+        LEFT JOIN 
+            componentes c ON mp.componente_id = c.id
+        WHERE 
+            mp.estado = 'pendiente'
+            AND mp.fecha_programada >= CURDATE()
+        ORDER BY 
+            mp.fecha_programada ASC
+        LIMIT 5
+    ";
+    
+    $mantenimientos = $conexion->select($query);
+    
+    // Si no hay resultados, devolver array vacío
+    if (!$mantenimientos) {
+        return [];
+    }
+    
+    // Procesar los resultados
+    $proximos = [];
+    foreach ($mantenimientos as $mantenimiento) {
+        // Determinar el nombre del equipo/componente
+        $nombre = $mantenimiento['equipo_nombre'] ?: 
+                 ($mantenimiento['componente_nombre'] ?: 'Sin nombre');
+        
+        // Determinar el código
+        $codigo = $mantenimiento['codigo'] ?: 
+                 ($mantenimiento['codigo_componente'] ?: 'Sin código');
+        
+        // Crear item
+        $proximos[] = [
+            'id' => $mantenimiento['id'],
+            'equipo_id' => $mantenimiento['equipo_id'],
+            'componente_id' => $mantenimiento['componente_id'],
+            'equipo_nombre' => $nombre,
+            'codigo' => $codigo,
+            'fecha_programada' => $mantenimiento['fecha_programada'],
+            'dias_restantes' => $mantenimiento['dias_restantes']
+        ];
+    }
+    
+    return $proximos;
+}
+
+/**
+ * Obtiene los 5 mantenimientos preventivos completados más recientes
+ */
+function obtenerMantenimientosRecientes($conexion) {
+    $query = "
+        SELECT 
+            mp.id,
+            mp.equipo_id,
+            mp.componente_id,
+            e.codigo as codigo,
+            c.codigo as codigo_componente,
+            e.nombre as equipo_nombre,
+            c.nombre as componente_nombre,
+            mp.descripcion_razon,
+            mp.fecha_realizado
+        FROM 
+            mantenimiento_preventivo mp
+        LEFT JOIN 
+            equipos e ON mp.equipo_id = e.id
+        LEFT JOIN 
+            componentes c ON mp.componente_id = c.id
+        WHERE 
+            mp.estado = 'completado'
+            AND mp.fecha_realizado IS NOT NULL
+        ORDER BY 
+            mp.fecha_realizado DESC
+        LIMIT 5
+    ";
+    
+    $mantenimientos = $conexion->select($query);
+    
+    // Si no hay resultados, devolver array vacío
+    if (!$mantenimientos) {
+        return [];
+    }
+    
+    // Procesar los resultados
+    $recientes = [];
+    foreach ($mantenimientos as $mantenimiento) {
+        // Determinar el nombre del equipo/componente
+        $nombre = $mantenimiento['equipo_nombre'] ?: 
+                 ($mantenimiento['componente_nombre'] ?: 'Sin nombre');
+        
+        // Determinar el código
+        $codigo = $mantenimiento['codigo'] ?: 
+                 ($mantenimiento['codigo_componente'] ?: 'Sin código');
+        
+        // Crear item
+        $recientes[] = [
+            'id' => $mantenimiento['id'],
+            'equipo_id' => $mantenimiento['equipo_id'],
+            'componente_id' => $mantenimiento['componente_id'],
+            'equipo_nombre' => $nombre,
+            'codigo' => $codigo,
+            'fecha_realizado' => $mantenimiento['fecha_realizado']
+        ];
+    }
+    
+    return $recientes;
 }

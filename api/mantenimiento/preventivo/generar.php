@@ -35,7 +35,8 @@ $response = [
     "equipos_generados" => 0,
     "componentes_generados" => 0,
     "equipos_faltantes" => 0,
-    "componentes_faltantes" => 0
+    "componentes_faltantes" => 0,
+    "fechas_actualizadas" => 0
 ];
 
 try {
@@ -45,14 +46,29 @@ try {
 
     // Determinar si es una solicitud GET (verificación) o POST (generación)
     $esGeneracion = $_SERVER["REQUEST_METHOD"] === "POST";
+    
+    // Verificar si se está solicitando actualizar fechas (botón "verificar")
+    $actualizarFechas = isset($_GET["actualizar_fechas"]) && $_GET["actualizar_fechas"] == 1;
 
-    // Iniciar transacción si es generación
-    if ($esGeneracion) {
+    // Iniciar transacción si es generación o actualización de fechas
+    if ($esGeneracion || $actualizarFechas) {
         $conn->beginTransaction();
     }
 
-    // 1. Verificar equipos que necesitan mantenimiento preventivo
-    if ($esGeneracion) {
+    // Si se solicita actualizar fechas, hacerlo
+    if ($actualizarFechas) {
+        $fechasActualizadas = actualizarFechasMantenimiento($conexion);
+        
+        // Confirmar transacción
+        $conn->commit();
+        
+        // Preparar respuesta
+        $response["success"] = true;
+        $response["fechas_actualizadas"] = $fechasActualizadas;
+        $response["message"] = "Se han actualizado las fechas de {$fechasActualizadas} mantenimientos preventivos";
+    }
+    // Si es generación, generar mantenimientos faltantes
+    else if ($esGeneracion) {
         $equiposGenerados = verificarYGenerarMantenimientoEquipos($conexion, true);
         $componentesGenerados = verificarYGenerarMantenimientoComponentes($conexion, true);
 
@@ -65,7 +81,9 @@ try {
         $response["equipos_generados"] = $equiposGenerados;
         $response["componentes_generados"] = $componentesGenerados;
         $response["message"] = "Generación de mantenimientos preventivos completada";
-    } else {
+    } 
+    // Si es verificación, solo contar faltantes
+    else {
         // Solo verificar cuántos faltan
         $equiposFaltantes = verificarYGenerarMantenimientoEquipos($conexion, false);
         $componentesFaltantes = verificarYGenerarMantenimientoComponentes($conexion, false);
@@ -92,6 +110,76 @@ try {
 // Devolver respuesta en formato JSON
 header("Content-Type: application/json");
 echo json_encode($response);
+
+/**
+ * Actualiza las fechas de mantenimientos preventivos pendientes
+ * @param Conexion $conexion Conexión a la base de datos
+ * @return int Número de fechas actualizadas
+ */
+function actualizarFechasMantenimiento($conexion) {
+    $contador = 0;
+    
+    // Obtener todos los mantenimientos preventivos pendientes
+    $sql = "SELECT mp.* FROM mantenimiento_preventivo mp WHERE mp.estado = 'pendiente'";
+    $mantenimientos = $conexion->select($sql);
+    
+    foreach ($mantenimientos as $mantenimiento) {
+        $fechaActualizada = false;
+        
+        // Determinar si es equipo o componente
+        if ($mantenimiento["equipo_id"]) {
+            // Es un equipo
+            $equipo = $conexion->selectOne("SELECT * FROM equipos WHERE id = ?", [$mantenimiento["equipo_id"]]);
+            
+            if ($equipo && $equipo["limite"] > 0) {
+                $orometroActual = floatval($equipo["orometro_actual"]);
+                $proximoOrometro = floatval($mantenimiento["orometro_programado"]);
+                $limiteDiario = floatval($equipo["limite"]);
+                
+                // Calcular nueva fecha programada
+                $nuevaFecha = calcularFechaProgramada($orometroActual, $proximoOrometro, $limiteDiario);
+                
+                // Actualizar fecha en la base de datos
+                $conexion->update(
+                    "mantenimiento_preventivo",
+                    ["fecha_programada" => $nuevaFecha],
+                    "id = ?",
+                    [$mantenimiento["id"]]
+                );
+                
+                $fechaActualizada = true;
+            }
+        } else if ($mantenimiento["componente_id"]) {
+            // Es un componente
+            $componente = $conexion->selectOne("SELECT * FROM componentes WHERE id = ?", [$mantenimiento["componente_id"]]);
+            
+            if ($componente && $componente["limite"] > 0) {
+                $orometroActual = floatval($componente["orometro_actual"]);
+                $proximoOrometro = floatval($mantenimiento["orometro_programado"]);
+                $limiteDiario = floatval($componente["limite"]);
+                
+                // Calcular nueva fecha programada
+                $nuevaFecha = calcularFechaProgramada($orometroActual, $proximoOrometro, $limiteDiario);
+                
+                // Actualizar fecha en la base de datos
+                $conexion->update(
+                    "mantenimiento_preventivo",
+                    ["fecha_programada" => $nuevaFecha],
+                    "id = ?",
+                    [$mantenimiento["id"]]
+                );
+                
+                $fechaActualizada = true;
+            }
+        }
+        
+        if ($fechaActualizada) {
+            $contador++;
+        }
+    }
+    
+    return $contador;
+}
 
 /**
  * Verifica y genera mantenimientos preventivos para equipos
@@ -129,7 +217,7 @@ function verificarYGenerarMantenimientoEquipos($conexion, $generarRegistros = fa
                 $datos = [
                     "equipo_id" => $equipo["id"],
                     "descripcion_razon" => $descripcion,
-                    "fecha_hora_programada" => $fechaProgramada,
+                    "fecha_programada" => $fechaProgramada,
                     "orometro_programado" => $proximoOrometro
                 ];
 
@@ -192,7 +280,7 @@ function verificarYGenerarMantenimientoComponentes($conexion, $generarRegistros 
                 $datos = [
                     "componente_id" => $componente["id"],
                     "descripcion_razon" => $descripcion,
-                    "fecha_hora_programada" => $fechaProgramada,
+                    "fecha_programada" => $fechaProgramada,
                     "orometro_programado" => $proximoOrometro
                 ];
 
